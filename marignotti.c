@@ -21,6 +21,9 @@
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
+#include <ctype.h>
+#include <string.h>
+
 //#include <netinet/in.h>
 
 #include "net.h"
@@ -50,6 +53,44 @@ typedef void (*selwakeup)(int col_flag, int pid);
 
 void debug_str(const char *cp)
 {
+
+    static Word Sweet16 = -1;
+    
+    
+    if (Sweet16 == -1)
+    {
+        //volatile char *ereg = (char *)0x00c04f;
+        /*
+        // Apple II tech note 201
+        */
+        word emu_id = 0;
+        word emu_version = 0;
+        asm {
+            // the lda ..,x is to prevent
+            // the 2nd read from being optimized out.
+            //brk 0xea
+            lda #0
+            ldx #0
+            sep #0x20
+            sta >0x00c04f,x
+            lda >0x00c04f,x
+            sta <emu_id
+            lda >0x00c04f,x
+            sta <emu_version
+            rep #0x20
+        }
+        
+        if (emu_id == 0x16 && emu_version >= 0x23) Sweet16 = 1;
+        else Sweet16 = 0;
+        
+        //*EMUBYTE = 0;
+        //if (*EMUBYTE == 0x16) Sweet16 = 1;
+        //else Sweet16 = 0;
+        #undef EMUBYTE
+    }
+    
+    if (Sweet16 == 0) return;
+
     asm {
         ldx <cp+2
         ldy <cp
@@ -57,9 +98,42 @@ void debug_str(const char *cp)
     }
 }
 
+void dump_bytes(const char *bytes, Word length)
+{
+    static const char *HexMap = "0123456789abcdef";
+    static char buffer[80];
+    
+    while (length)
+    {
+        Word i, j, l;
+        l = 16;
+        if (l > length) l = length;
+    
+        memset(buffer, ' ', sizeof(buffer));
+        
+        for (i = 0, j = 0; i < l; ++i)
+        {
+            unsigned x = bytes[i];
+            buffer[j++] = HexMap[x >> 4];
+            buffer[j++] = HexMap[x & 0x0f];
+            j++;
+            if (i == 7) j++;
+            
+            buffer[50 + i] = isascii(x) && isprint(x) ? x : '.';
+        }
+        
+        buffer[50 + 16 + 1] = 0;
+        debug_str(buffer);
+    
+        length -= l;
+        bytes += l;
+    }
+
+}
+
 void dump_srbuff(const srBuff *sb)
 {
-static char buffer[256];
+static char buffer[128];
 
     sprintf(buffer, "%04x %04x %08lx %08lx %08lx %04x %04x %04x",
         sb->srState,
@@ -72,11 +146,7 @@ static char buffer[256];
         sb->srAcceptCount
     );
 
-    asm {
-        ldx #^buffer
-        ldy #buffer
-        cop 0x84
-    }
+    debug_str(buffer);
 
 }
 
@@ -242,14 +312,16 @@ int do_detach(
     //WriteLine("\pdo_detach");
     debug_str("do_detach");
     
+    debug_str("TCPIPCloseTCP");
     terr = TCPIPCloseTCP(ipid);
     
     // semaphore...
+    debug_str("swait");
     swait(semID);
     
     prev = NULL;
     e = htable[ipid & (64-1)];
-    for(;;)
+    while (e)
     {
         if (e->ipid == ipid) break;
         prev = e;
@@ -264,9 +336,11 @@ int do_detach(
         dlist = e;
     }
     
+    debug_str("ssignal");
     ssignal(semID);
     // end semaphore.
     
+    debug_str("return 0");
     return 0;
 }
 
@@ -350,6 +424,20 @@ int do_rcvd(
     
         if (rr.rrBuffCount)
         {
+            {
+                static char buffer[80];
+                
+                sprintf(buffer, "read %04x bytes %04x %04x %04x",
+                  (Word)rr.rrBuffCount,
+                  rr.rrMoreFlag,
+                  rr.rrPushFlag,
+                  rr.rrUrgentFlag
+                  );
+                debug_str(buffer);
+                
+                dump_bytes(data, rr.rrBuffCount);
+            }
+            
             *len = rr.rrBuffCount;
             return 0;
         }
@@ -364,13 +452,13 @@ int do_rcvd(
         
         // if NON_BLOCKING, return EWOULDBLOCK.
         
-        asm {
-            cop 0x7f
-        }
+        //asm {
+        //    cop 0x7f
+        //}
         // poll in main loop not called, apparently.
         
-        TCPIPPoll(); // 
-        //sleep(1); // cop 0x7f?
+        //TCPIPPoll(); // 
+        sleep(1); // cop 0x7f?
     }
     
     return 0;
@@ -383,6 +471,7 @@ static int driver(
     struct sockaddr *addr, int *addrlen, 
     void *rights)
 {
+    int rv;
 
     {
         static char buffer[64];
@@ -422,11 +511,13 @@ static int driver(
         break;
         
     case PRU_DETACH:
+        // called from GS/OS
         // int SOCKclose(int sock) part 2
         return do_detach(socknum, m, m_len, addr, addrlen, rights);
         break;
         
     case PRU_DISCONNECT:
+        // called from GS/OS
         // int SOCKclose(int sock) part 1
         return do_disconnect(socknum, m, m_len, addr, addrlen, rights);
         break;
@@ -438,8 +529,19 @@ static int driver(
         break;
         
     case PRU_RCVD:
+        // called from GS/OS.
+        // may block, so be nice.
         // SOCKrdwr(struct rwPBlock *pb, word cmd, int sock)
-        return do_rcvd(socknum, m, m_len, addr, addrlen, rights);
+        asm {
+            // dec busy.
+            jsl 0xE10068
+        }
+        rv = do_rcvd(socknum, m, m_len, addr, addrlen, rights);
+        asm {
+            // inc busy.
+            jsl 0xE10064
+        }
+        return rv;
         break;
         
     case PRU_RCVOOB:
@@ -584,8 +686,9 @@ int main(int argc, char **argv)
     ipidHash *e;
     ipidHash *prev;
     
-    debug_str("TCPIPPoll()");
+    debug_str("TCPIPPoll() begin");
     TCPIPPoll();
+    debug_str("TCPIPPoll() end");
     
     // monitor disconnects...
     // semaphore ...
