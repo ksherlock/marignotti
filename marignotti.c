@@ -36,9 +36,28 @@ int semID;
 // this will be used to hold extra info (sockopts, etc)
 // as well as to keep a list of ipids waiting to close.
 
+struct flags {
+    // shutdown(2)
+    Word _SHUT_RD:1;
+    Word _SHUT_WR:1;
+    
+    // fcntl(2)
+    Word _NONBLOCK:1; 
+    
+    // setsockopt()
+    Word _OOBINLINE:1;
+    Word _LINGER:1;
+    Word _NOSIGPIPE:1;
+    
+};
+
 typedef struct ipidHash {
     Word ipid;
-    Word flags;
+    struct flags flags;
+    
+    Word _SNDLOWAT;
+    Word _RCVLOWAT;
+    
     struct ipidHash *next;
 } ipidHash;
 
@@ -47,6 +66,20 @@ ipidHash *htable[64] = { };
 ipidHash *dlist = NULL;
 
 
+ipidHash *findIpidHash(Word ipid)
+{
+    ipidHash *e;
+    
+    e = htable[ipid & (64 - 1)];
+    
+    while (e)
+    {
+        if (e->ipid == ipid) return e;
+        e = e->next;
+    }
+    
+    return NULL;
+}
 
 // not yet sure what this is for...
 typedef void (*selwakeup)(int col_flag, int pid);
@@ -177,9 +210,14 @@ int do_attach(
     // semaphore ...
     swait(semID);
     
-    e = (ipidHash *)malloc(sizeof(ipidHash));
+    e = (ipidHash *)calloc(sizeof(ipidHash), 1);
     e->ipid = ipid;
-    e->flags = 0;
+    
+    e->_RCVLOWAT = 1;
+    e->_SNDLOWAT = 1024;
+    e->flags._OOBINLINE = 1;
+    
+    
     e->next = htable[ipid & (64-1)];
     htable[ipid & (64 - 1)] = e;
     
@@ -200,6 +238,40 @@ struct xsockaddr_in {
   unsigned long sin_addr;
   char sin_zero[8];
 };
+
+
+int do_bind(
+    int socknum, 
+    void *m, size_t *m_len,
+    struct sockaddr *addr, int *addrlen, 
+    void *rights)
+{
+    // freebsd 2.0 whois does a bind before
+    // the connect.  
+    // this was removed in freebsd 3.0
+
+    Word ipid = (Word)socknum;
+    struct xsockaddr_in *sin = (struct xsockaddr_in *)addr;
+    
+    port = sin->sin_port; 
+    asm {
+        lda <port
+        xba
+        sta <port
+    }
+    
+    // ?
+    // bind is usually called for the server side.
+    
+    TCPIPSetNewDestination(ipid, 
+        sin->sin_addr, 
+        port);
+
+    if (_toolErr) return EPFNOSUPPORT;
+
+    return 0;
+}
+
 
 int do_connect(
     int socknum, 
@@ -283,6 +355,10 @@ int do_disconnect(
     
     debug_str("do_disconnect");
     //WriteLine("\pdo_disconnect");
+
+    // TODO -- SO_LINGER / SO_LINGER_SEC
+    // monitor the out queue and don't return until all
+    // data is sent (or it times out).
 
     // return value ignored.
     
@@ -374,7 +450,7 @@ int do_send(
     if (terr == tcperrConClosing)
     {
         *len = 0;
-        return ECONNRESET;
+        return ECONNRESET; // ? EPIPE?
     }
     
     return 0;
@@ -389,14 +465,32 @@ int do_rcvd(
 {
     // called from GS/OS, busy flag is set.
     
-    // todo -- EWOULDBLOCK?
+    // todo -- EWOULDBLOCK / EAGAIN
+    
+    // Marinetti will not read less than the requested
+    // size unless there is a push or the connection is closing.
+    
+    // TODO -- SO_RCVLOWAT (default is 1?)
+    // if SO_RCVLOWAT < queued data < requested length,
+    // read SO_RCVLOWAT bytes
     
     Word terr;
     Word ipid = (Word)socknum;
     void *data = (void *)m;
     size_t *len = (size_t *)m_len;
     
+    ipidHash *e;
     rrBuff rr;
+    
+    Word readCount;
+    Word minCount;
+    
+    if (!len || !data) return EFAULT;
+    
+    e = findIpidHash(ipid);
+    
+    readCount = *len; 
+    minCount = e ? e->_RCVLOWAT;
     
     //WriteLine("\pdo_rcvd");
 
@@ -409,18 +503,35 @@ int do_rcvd(
     }
 
     // todo -- should block unless O_NONBLOCK set.
-        
+    
+    
+    // todo -- could the read return 0 if there was a push at byte 0
+    // but data afterwards?
     for (;;)
     {
-    
+
         srBuff sr;
         
         terr = TCPIPStatusTCP(ipid, &sr);
         
         dump_srbuff(&sr);
+
+
+        if (!sr.srRcvQueued && e && e->flags._NONBLOCK)
+        {
+            *len = 0;
+            return EAGAIN;
+        } 
+                
+        // 
+        if (sr.srRcvQueued < readCount && sr.srRcvQueued >= minCount)
+        {
+            readCount = minCount;
+        } 
         
-            
-        terr = TCPIPReadTCP(ipid,  0, (Ref)data, *len, &rr);
+
+                
+        terr = TCPIPReadTCP(ipid,  0, (Ref)data, readCount, &rr);
     
         if (rr.rrBuffCount)
         {
@@ -448,19 +559,192 @@ int do_rcvd(
         // no data, no more data, then closing.       
         if (terr == tcperrConClosing && !rr.rrMoreFlag)
             return ECONNRESET;
-        
-        
-        // if NON_BLOCKING, return EWOULDBLOCK.
-        
+                
         //asm {
         //    cop 0x7f
         //}
         // poll in main loop not called, apparently.
         
         //TCPIPPoll(); // 
-        sleep(1); // cop 0x7f?
+        sleep(1);
     }
     
+    return 0;
+}
+
+
+int do_select(
+    int socknum, 
+    void *m, size_t *m_len,
+    struct sockaddr *addr, int *addrlen, 
+    void *rights)
+{
+
+    ipidHash *e;
+    srBuff sr;
+    Word terr;
+    
+    Word ipid = (Word)sock;
+    int *pid = (int *)m_len;
+    int *flag = (int *)(addr);
+
+    // *flag is return value as well as input value
+    // (which select type)
+    // SEL_READ = 0
+    // SEL_WRITE = 1
+    // SEL_EXCEPT = 2
+    
+    if (*flag == 0)
+    {
+        // sel read.
+        terr = TCPIPStatusTCP(ipid, &sr);
+        
+        if (sr.srRcvQueued)
+            *flag = 1;
+        else
+            *flag = 0;
+            
+        return 0;
+    }
+    
+    if (*flag ==  1)
+    {
+        // sel write.
+        // check the high water mark.
+        terr = TCPIPStatusTCP(ipid, &sr);
+        
+        e = findIpidHash(ipid);
+        
+        if (e && sr.srSndQueued >= e->_SNDLOWAT)
+            *flag = 0;
+        else 
+            *flag = 1;
+        
+    }
+
+    if (*flag == 2)
+    {
+        // exceptions??
+        *flag = 0;
+    }
+    
+
+    return 0;
+}
+
+int do_getsockopt(
+    Word ipid, 
+    void *p1, void *p2,
+    void *p3, void *p4, 
+    void *p5)
+{
+
+    ipidHash *e;
+    int level = *(int *)p1;
+    int optname = *(int *)p2;
+    void *optval = (void *)p3;
+    int *optlen = (int *)p4;
+    
+    if (!optval) return EINVAL;
+    
+    e = findIpidHash(ipid);
+    
+    switch (optname)
+    {
+    case SO_NREAD:
+        // return the amount of data available to read.
+        break;
+    
+    case SO_NWRITE:
+        // return the amount of data queued for writing.
+        break;
+        
+    case SO_TYPE:
+        *(Word *)optval = SOCK_STREAM;
+        return 0;
+        
+    case SO_NOSIGPIPE:
+        if (e) *(Word *)optval = e->flags._NOSIGPIPE;
+        else *(Word *)optval = 0;
+        return 0;
+        break;
+        
+    case SO_RCVLOWAT:
+        if (e) *(Word)optval = e->_RCVLOWAT;
+        else *(Word)optval = 1;
+        return 0;
+        
+    case SO_SNDLOWAT:
+        if (e) *(Word)optval = e->_SNDLOWAT;
+        else *(Word)optval = 1024;
+        return 0;    
+    
+    case SO_LINGER:
+        if (e) *(Word *)optval = e->flags._LINGER;
+        else *(Word *)optval = 0;
+        return 0;
+        break;   
+    
+    case SO_OOBINLINE:
+        if (e) *(Word *)optval = e->flags._OOBINLINE;
+        else *(Word *)optval = 1;
+        return 0;
+        break;        
+        
+    // unsupported ish.
+    case SO_SNDBUF:
+    case SO_RCVBUF:
+        // input/output buffer size
+        
+    case SO_RCVTIMEO:
+    case SO_SNDTIMEO:
+        // read/send timeout.
+        
+    case SO_ERROR:
+        // return any pending error and clear the error status.
+        
+    
+    default:
+        return ENOPROTOOPT;
+    }
+    
+    return ENOPROTOOPT;   
+}
+
+
+int do_shutdown(
+    Word ipid, 
+    void *p1, void *p2,
+    void *p3, void *p4, 
+    void *p5)
+{
+    ipidHash *e = findIpidHash(ipid);
+    
+    int how = *(int *)p1;
+    
+    // mark the read/write op disabled
+    // TODO -- main thread should read & ignore any
+    // incoming data if SHUT_RD? 
+    
+    if (!e) return EINVAL;
+    
+    switch(how)
+    {
+    case 0:
+        e->flags._SHUT_RD = 1;
+        break;
+    case 1:
+        e->flags._SHUT_WR = 1;
+        break;
+    case 2:
+        e->flags._SHUT_RD = 1;
+        e->flags._SHUT_WR = 1;
+        break;
+        
+    default:
+        return EINVAL;
+    }
+
     return 0;
 }
 
@@ -493,9 +777,8 @@ static int driver(
         break;
         
     case PRU_BIND:
-        //WriteLine("\pbind!");
-        // todo
-        return 0;
+        // KERNbind(int fd, struct sockaddr *my_addr, int addrlen, int *ERRNO)
+        return do_bind(socknum, m, m_len, addr, addrlen, rights);
         break;
         
     case PRU_CONNECT:
@@ -571,6 +854,9 @@ static int driver(
         break;
         
     case PRU_SELECT:
+        // 	int SOCKselect(int pid, int fl, int sock)
+        return do_select(socknum, m, m_len, addr, addrlen, rights);
+
         break;
     }
     
@@ -616,10 +902,11 @@ Word StartUp(displayPtr fx)
     flags |= kLoaded;
   }
 
-#if 0
+#if 1
   // require 3.0b3
   if (TCPIPLongVersion() < 0x03006003)
   {
+    if (fx) fx("Marinetti 3.0b3 is required.");
     if (flags & kLoaded)
       UnloadOneTool(54);
     return -1;      
@@ -671,6 +958,8 @@ int main(int argc, char **argv)
 
   flags = StartUp(DisplayMessage);
 
+  if (flags == -1) exit(1);
+
   semID = screate(1);
     
   InstallNetDriver(driver, 0);
@@ -687,6 +976,14 @@ int main(int argc, char **argv)
     ipidHash *prev;
     
     debug_str("TCPIPPoll() begin");
+    if (dlist)
+    {
+        // suspend so we can be fg.
+        kill(getpid(),SIGSTOP);
+        asm {
+            brk 0xea   
+        }
+    }
     TCPIPPoll();
     debug_str("TCPIPPoll() end");
     
@@ -715,6 +1012,7 @@ int main(int argc, char **argv)
         if (sr.srState == TCPSCLOSED)
         {
             
+            debug_str("TCPLogout");
             TCPIPLogout(e->ipid);
             free(e);
     
