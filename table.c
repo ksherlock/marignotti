@@ -2,6 +2,8 @@
 
 #include <string.h>
 #include <misctool.h>
+#include "s16debug.h"
+
 
 #pragma optimize 79
 #pragma noroot
@@ -109,7 +111,6 @@ void process_table(void)
     Entry *next;
     Entry *prev;
     
-    tick = GetTick();
     
     for (i = 0; i < TABLE_SIZE; ++i)
     {
@@ -117,18 +118,21 @@ void process_table(void)
         e = table[i];
         while (e)
         {
+            Word command;
             next = e->next;
         
-            if (e->command)
+            command = e->command;
+            if (command)
             {
-                Word expired = 0;
-                Word sig = 0;
+                Word expired;
+                Word sig;
                 Word state;
              
+                tick = GetTick();
                 IncBusy();
-
                 
-                if (e->timeout && tick > e->timeout)
+                expired = 0;
+                if (e->timeout != 0 && tick > e->timeout)
                     expired = 1;
                 
                 terr = TCPIPStatusTCP(e->ipid, &e->sr);
@@ -136,9 +140,15 @@ void process_table(void)
                 if (t) terr = t;
                 e->terr = terr;
                 
-                state = e->sr.srState;
+                s16_debug_printf("process: %04x : %04x : expired: %d", 
+                  e->ipid, command, expired);
+                  
+                s16_debug_srbuff(&e->sr);
                 
-                switch(e->command)
+                state = e->sr.srState;
+                sig = 0;
+                
+                switch(command)
                 {
                 case kCommandRead:
                     if (e->sr.srRcvQueued >= e->cookie
@@ -154,6 +164,10 @@ void process_table(void)
                     {
                         sig = 1;
                     }
+                    if (expired)
+                    {
+                        sig = 1;
+                    }
                     break;
                     
                 case kCommandDisconnect:
@@ -165,7 +179,14 @@ void process_table(void)
                 
                 case kCommandDisconnectAndLogout:
                     // logout and remove entry.
-                    if (state == TCPSCLOSED)
+                    if (expired)
+                    {
+                        // sweet 16 link layer?
+                        TCPIPAbortTCP(e->ipid);
+                        state = TCPSCLOSED;
+                    }
+                    
+                    if (state == TCPSCLOSED || state == TCPSTIMEWAIT)
                     {
                         TCPIPLogout(e->ipid);
                         sdelete(e->semaphore);
@@ -186,6 +207,7 @@ void process_table(void)
 
                 if (sig)
                 {
+                    s16_debug_printf("sending signal to %d", e->semaphore);
                     e->command = kCommandNone;
                     ssignal(e->semaphore);
                 }

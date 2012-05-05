@@ -2,6 +2,7 @@
 #include <gno/kerntool.h>
 #include <errno.h>
 #include <misctool.h>
+#include "s16debug.h"
 
 #pragma noroot
 #pragma optimize 79
@@ -76,6 +77,9 @@ int mconnect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
         
         xerrno = queue_command(e, kCommandConnect, 0, timeout);
         
+        s16_debug_printf("mconnect: %d - %d - %d", 
+          e->semaphore, xerrno, e->command);
+        
         // hmmm .. should these abort?
         if (xerrno == EINTR)
         {
@@ -98,7 +102,7 @@ int mconnect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
             // todo -- differentiate ECONNREFUSED vs EHOSTUNREACH
             return ECONNREFUSED;
         
-        if (timeout && timeout > GetTick())
+        if (timeout && timeout <= GetTick())
         {
             IncBusy();
             TCPIPAbortTCP(e->ipid);

@@ -2,6 +2,7 @@
 #include <gno/kerntool.h>
 #include <errno.h>
 #include "net.h"
+#include "s16debug.h"
 
 #pragma noroot
 #pragma optimize 79
@@ -13,12 +14,12 @@ int block(int sem)
     return xerrno;
 }
 
-int queue_command(Entry *e, word command, LongWord cookie, LongWord timeout)
+int queue_command(Entry *e, Word command, LongWord cookie, LongWord timeout)
 {
     int xerrno;
     
     SEI();
-    e->command = kCommandRead;
+    e->command = command;
     e->cookie = cookie;
     e->timeout = timeout;
     CLI();
@@ -43,6 +44,9 @@ int driver(
 {
     int rv;
     Entry *e;
+    
+    s16_debug_printf("driver: %04x : %04x", socknum, req);
+
     
     if (req == PRU_ATTACH)
     {

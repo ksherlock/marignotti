@@ -63,7 +63,7 @@ typedef struct xsockaddr_in {
 #define CLI() asm { cli }
 
 int block(int sem);
-int queue_command(Entry *e, word command, LongWord cookie, LongWord timeout);
+int queue_command(Entry *e, Word command, LongWord cookie, LongWord timeout);
 
 void init_table(void);
 void destroy_table(void);

@@ -18,7 +18,7 @@ int mattach(int type, void *p1, void *p2, void *p3, void *p4, void *p5)
     int protocol = *(int *)p3;
     
     if (type != SOCK_STREAM) return ESOCKTNOSUPPORT;
-    if (protocol != 6) return EPROTONOSUPPORT;
+    //if (protocol != 6) return EPROTONOSUPPORT;
     // TODO -- check protocol? 6 = tcp, 1 = icmp, 17 = udp.
 
     IncBusy();

@@ -104,7 +104,7 @@ int mread(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
             return 0;
         }
                 
-        if (timeout && timeout > GetTick())
+        if (timeout && timeout <= GetTick())
             return EAGAIN;
             
     }
