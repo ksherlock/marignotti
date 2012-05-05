@@ -39,7 +39,8 @@ typedef struct Entry {
     
     LongWord _SNDLOWAT;
     LongWord _RCVLOWAT;
-    Word _RCVTIMEO;
+    LongWord _RCVTIMEO;
+    LongWord _SNDTIMEO;
     Word _LINGER_SEC;
     
 

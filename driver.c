@@ -32,9 +32,6 @@ int queue_command(Entry *e, Word command, LongWord cookie, LongWord timeout)
 
 
 
-
-
-
 #pragma databank 1
 
 int driver(
@@ -52,6 +49,7 @@ int driver(
     {
         return mattach(socknum, p1, p2, p3, p4, p5);
     }
+
     
     e = find_entry(socknum);
     if (!e)
@@ -153,9 +151,11 @@ int driver(
         break;
         
     case PRU_CO_GETOPT:
+        return mgetsockopt(e, p1, p2, p3, p4, p5);
         break;
         
     case PRU_CO_SETOPT:
+        return msetsockopt(e, p1, p2, p3, p4, p5);
         break;
         
     case PRU_SELECT:
