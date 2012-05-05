@@ -8,11 +8,10 @@
 #pragma optimize 79
 
 // called through GSOS.
-int mread(int ipid, void *p1, void *p2, void *p3, void *p4, void *p5)
+int mread(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
 {
     rrBuff rr;
 
-    Entry *e;
     int xerrno = 0;
     LongWord count;
     LongWord timeout;
@@ -24,19 +23,12 @@ int mread(int ipid, void *p1, void *p2, void *p3, void *p4, void *p5)
     *(LongWord *)p2 = 0;
 
     
-    e = find_entry(ipid);
-    
-    if (!e)
-    {
-        return EBADF;
-    }
-
     count = e->_RCVLOWAT;
     if (count > nbytes) count = nbytes;
 
     // call immediately if possible, otherwise queue it up.
     IncBusy();
-    terr = TCPIPStatusTCP(ipid, &e->sr);
+    terr = TCPIPStatusTCP(e->ipid, &e->sr);
     t = _toolErr;
     DecBusy();
     if (t) terr = t;
@@ -56,7 +48,7 @@ int mread(int ipid, void *p1, void *p2, void *p3, void *p4, void *p5)
         if (count)
         {
             IncBusy();
-            terr = TCPIPReadTCP(ipid, 0, (Ref)buffer, count, &rr);
+            terr = TCPIPReadTCP(e->ipid, 0, (Ref)buffer, count, &rr);
             t = _toolErr;
             DecBusy();
             if (t) terr = t;
@@ -103,7 +95,7 @@ int mread(int ipid, void *p1, void *p2, void *p3, void *p4, void *p5)
             if (count)
             {
                 IncBusy();
-                terr = TCPIPReadTCP(ipid, 0, (Ref)buffer, count, &rr);
+                terr = TCPIPReadTCP(e->ipid, 0, (Ref)buffer, count, &rr);
                 t = _toolErr;
                 DecBusy();
                                 

@@ -8,9 +8,8 @@
 #pragma optimize 79
 
 // called through GSOS.
-int mwrite(int ipid, void *p1, void *p2, void *p3, void *p4, void *p5)
+int mwrite(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
 {
-    Entry *e;
     Word terr;
     Word t;
     int xerrno;
@@ -20,21 +19,14 @@ int mwrite(int ipid, void *p1, void *p2, void *p3, void *p4, void *p5)
     
     *(LongWord *)p2 = 0;
     
-    e = find_entry(ipid);
-    
-    if (!e)
-    {
-        return EBADF;
-    }
     
     // todo -- queue up if pending >= _SNDLOWAT?
     // todo -- push?
     
     IncBusy();
-    terr = TCPIPWriteTCP(ipid, buffer, nbytes, 0, 0);
+    terr = TCPIPWriteTCP(e->ipid, buffer, nbytes, 0, 0);
     t = _toolErr;
     DecBusy();
-    
     if (t) terr = t;
     
     if (t || terr == tcperrBadConnection)
