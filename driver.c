@@ -89,6 +89,7 @@ int driver(
         break;
         
     case PRU_CONTROL:
+        return mioctl(e, p1, p2, p3, p4, p5);
         break;
         
     case PRU_DETACH:
@@ -145,6 +146,7 @@ int driver(
         break;
         
     case PRU_SHUTDOWN:
+        return mshutdown(e, p1, p2, p3, p4, p5);
         break;
         
     case PRU_SOCKADDR:
