@@ -5,6 +5,8 @@
 #include <sys/socket.h>
 #include <sys/time.h>
 
+#include <intmath.h>
+
 #pragma noroot
 #pragma optimize 79
 
@@ -22,7 +24,7 @@ static void ticks_to_timeval(LongWord ticks, struct timeval *tv)
         qr = LongDivide(ticks, 60);
     
         tv->tv_sec = qr.quotient;
-        tv->tv_usec = Multiply(qr.remainder, 16667);
+        tv->tv_usec = qr.remainder * 16667;
         // qr.remainder * 1,000,000 / 60
     }
     
