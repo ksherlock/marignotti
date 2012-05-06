@@ -88,6 +88,9 @@ int mbind(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 int mdetach(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 int mdisconnect(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 
+int mshutdown(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
+
+
 int mgetsockopt(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 int msetsockopt(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 
