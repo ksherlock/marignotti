@@ -12,8 +12,14 @@
 #define TABLE_MASK 15
 static struct Entry *table[TABLE_SIZE];
 
+// ipids waiting to close + logout.
+static struct Entry *dlist;
+
+static void destroy_entry(Entry *e, Boolean abort);
+
 void init_table(void)
 {
+    dlist = NULL;
     memset(table, 0, sizeof(table));
 }
 
@@ -21,6 +27,7 @@ void destroy_table(void)
 {
 
     Entry *e;
+    Entry *next;
     unsigned i;
     
     for (i = 0; i < TABLE_SIZE; ++i)
@@ -32,24 +39,32 @@ void destroy_table(void)
         
         while (e)
         {
-            Entry *next;
-            
             IncBusy();
             
             next = e->next;
-            
-            TCPIPAbortTCP(e->ipid);
-            TCPIPLogout(e->ipid);
-            
-            sdelete(e->semaphore);
-            free(e);
-            
+            destroy_entry(e, true);
             e = next;
             
             DecBusy();
         }
-        
     }
+    
+    e = dlist;
+    while (e)
+    {
+        next = e->next;
+        destroy_entry(e, true);
+        e = next;
+    }
+}
+
+static void destroy_entry(Entry *e, Boolean abort)
+{
+    if (abort) TCPIPAbortTCP(e->ipid);
+    
+    TCPIPLogout(e->ipid);
+    sdelete(e->semaphore);
+    free(e);    
 }
 
 Entry *find_entry(Word ipid)
@@ -151,6 +166,7 @@ void process_table(void)
                 switch(command)
                 {
                 case kCommandRead:
+                    // block until data available.
                     if (e->sr.srRcvQueued >= e->cookie
                         || expired
                         || terr)
@@ -159,7 +175,20 @@ void process_table(void)
                     }
                     break;
                     
+                
+                case kCommandWrite:
+                    // block until data sent.
+                    if (e->sr.srSndQueued <= e->cookie
+                        || expired
+                        || terr)
+                    {
+                        sig = 1;
+                    }
+                    break;
+                    
+                    
                 case kCommandConnect:
+                    // block until connection established.
                     if (state >= TCPSESTABLISHED || state == TCPSCLOSED)
                     {
                         sig = 1;
@@ -171,6 +200,7 @@ void process_table(void)
                     break;
                     
                 case kCommandDisconnect:
+                    // block until connection closed.
                     if (state == TCPSCLOSED)
                     {
                         sig = 1;
@@ -178,29 +208,24 @@ void process_table(void)
                     break;
                 
                 case kCommandDisconnectAndLogout:
-                    // logout and remove entry.
-                    if (expired)
+                
+                    // move to other list
+                    // since it's no longer a valid fd
+                    
+                    if (prev)
                     {
-                        // sweet 16 link layer?
-                        TCPIPAbortTCP(e->ipid);
-                        state = TCPSCLOSED;
+                        prev->next = next;
+                    }
+                    else
+                    {
+                        table[i] = next;
                     }
                     
-                    if (state == TCPSCLOSED || state == TCPSTIMEWAIT)
-                    {
-                        TCPIPLogout(e->ipid);
-                        sdelete(e->semaphore);
-                        free(e);
-                        e = NULL;
-                        if (prev)
-                        {
-                            prev->next = next;
-                        }
-                        else
-                        {
-                            table[i] = next;
-                        }
-                    }
+                    // add to the dlist.
+                    e->next = dlist;
+                    dlist = e;
+                    e = NULL;
+                    
                     break;                    
 
                 }
@@ -214,11 +239,46 @@ void process_table(void)
 
                 DecBusy();
             } // e->command
-                        
+                     
+            if (e) prev = e;   
             e = next;
         }
     
     
+    }
+    
+    
+    // now process the disconnect list.
+    e = dlist;
+    prev = NULL;
+    while (e)
+    {
+        next = e->next;
+        
+        IncBusy();
+        terr = TCPIPStatusTCP(e->ipid, &e->sr);
+        t = _toolErr;
+        if (t) terr = t;
+        DecBusy();
+        
+        if (e->sr.srState == TCPSCLOSED)
+        {
+            destroy_entry(e, false);
+            
+            e = NULL;
+            // remove..
+            if (prev)
+            {
+                prev->next = next;
+            }
+            else
+            {
+                dlist = next;
+            }            
+        }
+        
+        if (e) prev = e;
+        e = next;
     }
 
 }
