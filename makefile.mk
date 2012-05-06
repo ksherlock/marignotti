@@ -1,6 +1,7 @@
 CFLAGS += $(DEFINES) -v -w 
-OBJS = main.o table.o driver.o s16debug.o mattach.o mconnect.o \
-mread.o mwrite.o mdetach.o
+OBJS = main.o table.o driver.o s16debug.o \
+mattach.o mconnect.o mread.o mwrite.o mdetach.o \
+mioctl.o mshutdown.o mgetsockopt.o msetsockopt.o
 
 TARGET = marignotti
 
@@ -19,6 +20,10 @@ mwrite.o: mwrite.c marignotti.h
 mattach.o: mattach.c marignotti.h
 mconnect.o: mconnect.c marignotti.h
 mdetach.o: mdetach.c marignotti.h
+msetsockopt.o: msetsockopt.c marignotti.h
+mgetsockopt.o: mgetsockopt.c marignotti.h
+mshutdown.o: mshutdown.c marignotti.h
+mioctl.o: mioctl.c marignotti.h
 
 
 clean:
