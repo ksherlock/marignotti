@@ -109,12 +109,6 @@ int msetsockopt(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
         e->_REUSEPORT = flag ? 1 : 0;
         return 0;
         
-    case SO_DEBUG:
-        if (!get_flag(optval, optlen, &flag))
-            return EINVAL;
-        e->_DEBUG = flag ? 1 : 0;
-        return 0;
-        
     case SO_KEEPALIVE:
         if (!get_flag(optval, optlen, &flag))
             return EINVAL;
