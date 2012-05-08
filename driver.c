@@ -41,9 +41,12 @@ int driver(
 {
     int rv;
     Entry *e;
+    Word oldBusy;
     
     s16_debug_printf("driver: %04x : %04x", socknum, req);
 
+    
+    oldBusy = *BusyFlag;
     
     if (req == PRU_ATTACH)
     {
@@ -121,9 +124,9 @@ int driver(
         // 
         // may block, so be nice.
         // SOCKrdwr(struct rwPBlock *pb, word cmd, int sock)
-        DecBusy();
+        if (oldBusy) DecBusy();
         rv = mread(e, p1, p2, p3, p4, p5);
-        IncBusy();
+        if (oldBusy) IncBusy();
         return rv;
         break;
         
@@ -133,9 +136,9 @@ int driver(
     case PRU_SEND:
         // SOCKrdwr(struct rwPBlock *pb, word cmd, int sock)
         // same as above.
-        DecBusy();
+        if (oldBusy) DecBusy();
         rv = mwrite(e, p1, p2, p3, p4, p5);
-        IncBusy();
+        if (oldBusy) IncBusy();
         return rv;
         break;
         
@@ -150,6 +153,7 @@ int driver(
         break;
         
     case PRU_SOCKADDR:
+        return mgetsockname(e, p1, p2, p3, p4, p5);
         break;
         
     case PRU_CO_GETOPT:
@@ -162,6 +166,7 @@ int driver(
         
     case PRU_SELECT:
         // 	int SOCKselect(int pid, int fl, int sock)
+        return mselect(e, p1, p2, p3, p4, p5);
         break;
     }
     
