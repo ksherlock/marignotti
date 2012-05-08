@@ -30,6 +30,38 @@ static void ticks_to_timeval(LongWord ticks, struct timeval *tv)
     
 }
 
+static int set_flag(void *p, int size, int flag)
+{
+    if (size == 4)
+    {
+        *(long *)p = flag;
+        return 0;
+    }
+    if (size == 2)
+    {
+        *(int *)p = flag;
+        return 0;
+    }
+
+    return EINVAL;
+}
+
+static int set_flag_long(void *p, int size, long flag)
+{
+    if (size == 4)
+    {
+        *(long *)p = flag;
+        return 0;
+    }
+    if (size == 2)
+    {
+        *(int *)p = flag;
+        return 0;
+    }
+
+    return EINVAL;
+}
+
 int mgetsockopt(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
 {
     Word terr;
@@ -44,68 +76,43 @@ int mgetsockopt(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     if (!optval) return EINVAL;
     
     
+    // todo -- should set optlen = returned size.
+    
     // todo -- linger
     switch (optname)
     {
     
     case SO_TYPE:
         // todo... non-stream 
-        if (optlen == 4)
-        {
-            *(LongWord *)optval = SOCK_STREAM;
-            return 0;
-        }
-        if (optlen == 2)
-        {
-            *(Word *)optval = SOCK_STREAM;
-            return 0;        
-        }
+        return set_flag(optval, optlen, SOCK_STREAM);
         break; 
         
+    case SO_DEBUG:
+        return set_flag(optval, optlen, e->_DEBUG);  
+        break;
+
+    case SO_REUSEADDR:
+        return set_flag(optval, optlen, e->_REUSEADDR);  
+        break;
+
+    case SO_REUSEPORT:
+        return set_flag(optval, optlen, e->_REUSEPORT);  
+        break;
+
+    case SO_KEEPALIVE:
+        return set_flag(optval, optlen, e->_KEEPALIVE);  
+        break;
 
     case SO_OOBINLINE:
-        if (optlen == 4)
-        {
-            *(LongWord *)optval = 1;
-            return 0;
-        }
-        if (optlen == 2)
-        {
-            *(Word *)optval = 1;
-            return 0;      
-        }
-        if (optlen == 1)
-        {
-            *(char *)optval = 1;
-            return 0;
-        }
+        return set_flag(optval, optlen, 1);
         break;        
         
-        
     case SO_SNDLOWAT:
-        if (optlen == 4)
-        {
-            *(LongWord *)optval = e->_SNDLOWAT;
-            return 0;
-        }
-        if (optlen == 2)
-        {
-            *(Word *)optval = e->_SNDLOWAT;
-            return 0;        
-        }
+        return set_flag(optval, optlen, e->_SNDLOWAT);
         break;
         
     case SO_RCVLOWAT:
-        if (optlen == 4)
-        {
-            *(LongWord *)optval = e->_RCVLOWAT;
-            return 0;
-        }
-        if (optlen == 2)
-        {
-            *(Word *)optval = e->_RCVLOWAT;
-            return 0;        
-        }
+        return set_flag(optval, optlen, e->_RCVLOWAT);
         break;
             
     case SO_SNDTIMEO:
@@ -135,19 +142,11 @@ int mgetsockopt(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
         IncBusy();
         terr = TCPIPStatusTCP(e->ipid, &e->sr);
         t = _toolErr;
-        DecBusy();
         if (t) terr = t;
+        e->terr = terr;
+        DecBusy();
         
-        if (optlen == 4)
-        {
-            *(LongWord *)optval = e->sr.srRcvQueued;
-            return 0;
-        }
-        if (optlen == 2)
-        {
-            *(Word *)optval = e->sr.srRcvQueued;
-            return 0;
-        }
+        return set_flag_long(optval, optlen, e->sr.srRcvQueued);
         break;
     
     #endif
@@ -157,20 +156,11 @@ int mgetsockopt(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
         IncBusy();
         terr = TCPIPStatusTCP(e->ipid, &e->sr);
         t = _toolErr;
-        DecBusy();
         if (t) terr = t;
+        e->terr = terr;        
+        DecBusy();
 
-        if (optlen == 4)
-        {
-            *(LongWord *)optval = e->sr.srSndQueued;
-            return 0;
-        }
-        if (optlen == 2)
-        {
-            *(Word *)optval = e->sr.srSndQueued;
-            return 0;
-        }
-        return EINVAL;
+        return set_flag_long(optval, optlen, e->sr.srSndQueued);
         break;  
     #endif
     

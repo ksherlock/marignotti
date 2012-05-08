@@ -30,11 +30,53 @@ static LongWord timeval_to_ticks(struct timeval tv)
     return rv;    
 }
 
+static boolean get_flag(void *p, int size, Word *flag)
+{
+    if (size == 4)
+    {
+        *flag = *(LongWord *)flag;
+        return true;
+    }
+    if (size == 2)
+    {
+        *flag = *(Word *)flag;
+        return true;
+    }
+    if (size == 1)
+    {
+        *flag = *(Byte *)flag;
+        return true;
+    }
+    
+    return false;
+}
+
+static boolean get_flag_long(void *p, int size, LongWord *flag)
+{
+    if (size == 4)
+    {
+        *flag = *(LongWord *)flag;
+        return true;
+    }
+    if (size == 2)
+    {
+        *flag = *(Word *)flag;
+        return true;
+    }
+    if (size == 1)
+    {
+        *flag = *(Byte *)flag;
+        return true;
+    }
+    
+    return false;
+}
 
 int msetsockopt(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
 {
     Word terr;
     Word t;
+    Word flag;
     
     int level = *(int *)p1;
     int optname = *(int *)p2;
@@ -49,52 +91,62 @@ int msetsockopt(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     switch(optname)
     {
     
+    case SO_DEBUG:
+        if (!get_flag(optval, optlen, &flag))
+            return EINVAL;
+        e->_DEBUG = flag ? 1 : 0;
+        return 0;
+    
+    case SO_REUSEADDR:
+        if (!get_flag(optval, optlen, &flag))
+            return EINVAL;
+        e->_REUSEADDR = flag ? 1 : 0;
+        return 0;
+        
+    case SO_REUSEPORT:
+        if (!get_flag(optval, optlen, &flag))
+            return EINVAL;
+        e->_REUSEPORT = flag ? 1 : 0;
+        return 0;
+        
+    case SO_DEBUG:
+        if (!get_flag(optval, optlen, &flag))
+            return EINVAL;
+        e->_DEBUG = flag ? 1 : 0;
+        return 0;
+        
+    case SO_KEEPALIVE:
+        if (!get_flag(optval, optlen, &flag))
+            return EINVAL;
+        e->_KEEPALIVE = flag ? 1 : 0;
+        return 0;
+    
     case SO_OOBINLINE:
-        if (optlen == 4)
-        {
-            Word flag = *(LongWord *)optval;
-            if (!flag) return EINVAL;
-            return 0;
-        }
-        if (optlen == 2)
-        {
-            Word flag = *(Word *)optval;
-            if (!flag) return EINVAL;
-            return 0;        
-        }
-        if (optlen == 1)
-        {
-            Word flag = *(char *)optval;
-            if (!flag) return EINVAL;
-            return 0;
-        }
+        // always 1.
+        if (!get_flag(optval, optlen, &flag))
+            return EINVAL;
+        if (!flag)
+            return EINVAL;
+        return 0;
         break;
+
             
     case SO_SNDLOWAT:
-        if (optlen == 4)
-        {
-             e->_SNDLOWAT = *(LongWord *)optval;
-            return 0;
-        }
-        if (optlen == 2)
-        {
-             e->_SNDLOWAT = *(Word *)optval;
-            return 0;        
-        }
+        // 0 is valid.
+        if (!get_flag_long(optval, optlen, &e->_SNDLOWAT)) 
+            return EINVAL;
+        return 0;
         break;
     
     
     case SO_RCVLOWAT:
-        if (optlen == 4)
-        {
-             e->_RCVLOWAT = *(LongWord *)optval;
-            return 0;
-        }
-        if (optlen == 2)
-        {
-             e->_RCVLOWAT = *(Word *)optval;
-            return 0;        
-        }
+        // min size = 1.
+        if (!get_flag_long(optval, optlen, &e->_RCVLOWAT)) 
+            return EINVAL;
+        if (e->_RCVLOWAT) return 0;
+        
+        e->_RCVLOWAT = 1;
+        return EINVAL;
         break; 
         
     case SO_SNDTIMEO:

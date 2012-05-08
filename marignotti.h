@@ -33,6 +33,11 @@ typedef struct Entry {
     unsigned _NONBLOCK:1;
     
     //setsockopt(2)
+    unsigned _DEBUG:1;
+    unsigned _REUSEADDR:1;
+    unsigned _REUSEPORT:1;
+    unsigned _KEEPALIVE:1;
+
     unsigned _OOBINLINE:1;
     unsigned _LINGER:1;
     unsigned _NOSIGPIPE:1;
@@ -59,6 +64,8 @@ typedef struct xsockaddr_in {
 #define IncBusy() asm { jsl 0xE10064 }
 #define DecBusy() asm { jsl 0xE10068 }
 #define Resched() asm { cop 0x7f }
+
+#define BusyFlag ((byte *)0xE100FFl)
 
 #define SEI() asm { sei }
 #define CLI() asm { cli }
@@ -95,6 +102,8 @@ int mgetsockopt(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 int msetsockopt(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 
 int mioctl(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
+int mgetsockname(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
+int mselect(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 
 
 
