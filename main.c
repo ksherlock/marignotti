@@ -13,6 +13,7 @@
 #include <gno/gno.h>
 
 #pragma optimize 79
+#pragma stacksize 768 // 406, so far.
 
 int semID = 0;
 Word MyID;
