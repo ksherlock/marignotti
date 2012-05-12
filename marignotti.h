@@ -26,8 +26,6 @@ typedef struct Entry {
     Word command;
     LongWord cookie;
     LongWord timeout;
-
-    Word socket_type;
     
     // select magic.
     selwakeupfx select_fx;
@@ -53,6 +51,8 @@ typedef struct Entry {
     unsigned _OOBINLINE:1;
     unsigned _LINGER:1;
     unsigned _NOSIGPIPE:1;
+    
+    Word _TYPE;
     
     LongWord _SNDLOWAT;
     LongWord _RCVLOWAT;

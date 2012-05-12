@@ -44,7 +44,7 @@ int mattach(int type, void *p1, void *p2, void *p3, void *p4, void *p5)
         return ENOMEM;
     }
     e->select_fx = fx;
-    e->socket_type = type;
+    e->_TYPE = type;
     
     *(Word *)p1 = ipid;
     

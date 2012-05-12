@@ -84,7 +84,7 @@ int mgetsockopt(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     
     case SO_TYPE:
         // todo... non-stream 
-        return set_flag(optval, optlen, SOCK_STREAM);
+        return set_flag(optval, optlen, e->_TYPE);
         break; 
         
     case SO_DEBUG:
