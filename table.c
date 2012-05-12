@@ -8,6 +8,9 @@
 #pragma optimize 79
 #pragma noroot
 
+
+extern boolean readable(Entry *e);
+
 #define TABLE_SIZE 16
 #define TABLE_MASK 15
 static struct Entry *table[TABLE_SIZE];
@@ -106,7 +109,10 @@ Entry *create_entry(Word ipid)
     e->_OOBINLINE = 1;
     e->_SNDLOWAT = 1024;
     e->_RCVLOWAT = 1;
-        
+    
+    e->select_rd_pid = 0xffff;
+    e->select_wr_pid = 0xffff;
+    
     SEI();
     e->next = table[ipid & TABLE_MASK];
     table[ipid & TABLE_MASK] = e;
@@ -135,6 +141,39 @@ void process_table(void)
         {
             Word command;
             next = e->next;
+        
+        
+            // select.
+            // do this first ... a close would invalidate.
+            if (e->select_rd_pid != 0xffff)
+            {
+                if (readable(e))
+                {
+                    Word coll;
+                    Word pid;
+                    
+                    SEI()
+                    
+                    coll = e->select_rd_collision;
+                    pid = e->select_rd_pid;
+                    
+                    e->select_rd_pid = 0xffff;
+                    e->select_rd_collision = 0;
+                                        
+                    CLI()
+                    if (e->select_fx)
+                        e->select_fx(coll, pid);
+                    
+                    if (Debug > 0)
+                    {
+                        s16_debug_printf("select/read wakeup.");
+                    }
+                    
+                }
+            
+            }
+            
+                    
         
             command = e->command;
             if (command)
@@ -241,7 +280,10 @@ void process_table(void)
 
                 DecBusy();
             } // e->command
-                     
+            
+            
+
+                 
             if (e) prev = e;   
             e = next;
         }

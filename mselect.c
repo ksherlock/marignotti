@@ -1,6 +1,7 @@
 #include "marignotti.h"
 #include <gno/kerntool.h>
 #include <errno.h>
+#include <sys/socket.h>
 
 #include "s16debug.h"
 
@@ -11,14 +12,79 @@
  * return value is ignored.
  * 
  */
+ 
+ 
+ /*
+  * select is rather ugly...
+  * listen and connect pass in a select wakeup function which
+  * takes two parameters, a collision flag and the pid to awaken.
+  * 
+  * when select is called, it returns immediately, in the affirmative 
+  * if possible.  Otherwise, it stores the pid and the collision flag. 
+  * When the condition is met, the select wakeup function is called
+  * and the pid and collision flag are cleared.
+  *
+  * exceptions (which really mean OOB) are not supported.
+  * write currently always returns immediately, in the affirmative.
+  * for a server, "read" means a connection is pending.
+  * otherwise, it means the read will not block (ie, data is available
+  * or the connection has closed.
+  *
+  * this is all based on looking at the select.asm and driver source
+  * code, so it could be wrong...
+  */
+ 
 
-static boolean readable(Entry *e)
+boolean readable(Entry *e)
 {
+
+    Word state;
+    Word terr;
+    Word t;
+    
+    state = e->sr.srState;
+
+    // hmm.. read will return 0 immediately.
     if (e->_SHUT_RD)
-        return false;
-        
-    if (e->sr.srState > TCPSESTABLISHED && e->sr.srRcvQueued)
         return true;
+        
+    if (e->_TYPE == SOCK_DGRAM)
+    {
+        Word count;
+        /*
+        udpVars uv;
+        IncBusy();
+        TCPIPStatusUDP(e->ipid, &uv);
+        //t = _toolErr;
+        DecBusy();
+        
+        return uv.uvQueueSize > 0;
+        */
+        IncBusy();
+        count = TCPIPGetDatagramCount(e->ipid, protocolUDP);
+        DecBusy();
+        
+        return count > 0;
+    }
+    
+
+    IncBusy();
+    terr = TCPIPStatusTCP(e->ipid, &e->sr);
+    t = _toolErr;
+    if (t) terr = t;
+    e->terr = terr;
+    DecBusy();
+    
+    // for a server, "read" means "accept".
+    if (state == TCPSLISTEN)
+    {
+        return e->sr.srAcceptCount > 0;
+    }
+    
+    // eof means readable.
+    if (state == TCPSCLOSED || state > TCPSESTABLISHED)
+        return true;
+    
 
     if (e->sr.srRcvQueued >= e->_RCVLOWAT)
         return true;
@@ -42,29 +108,8 @@ static boolean writable(Entry *e)
 
 static boolean exceptable(Entry *e)
 {
-
-    switch (e->terr)
-    {
-    case tcperrOK:
-        break;
-    case tcperrConClosing:
-    case tcperrClosing:
-    case tcperrConReset:
-        if (!e->sr.srRcvQueued)
-            return true;
-        break;
-    }
-
-    if (e->sr.srRcvQueued)
-        return false;
-        
-    if (e->sr.srNetworkError)
-        return true;
-
-    if (e->sr.srState > TCPSESTABLISHED)
-        return true;
-    
-    return false;
+    return 0;
+    // never.
 }
 
 int mselect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
@@ -74,57 +119,50 @@ int mselect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     
     int pid = *(int *)p2;
     int flag = *(int *)p3;
-
-    *(int *)p3 = 0;
+    int *outflag = (int *)p3;
+    
+    *outflag = 0;
 
 
     if (Debug > 0)
     {
-        s16_debug_printf("select pid = %5d flag = %d", pid, flag);
+        s16_debug_printf("select pid = %d flag = %d", pid, flag);
     }
 
-    IncBusy();
-    terr = TCPIPStatusTCP(e->ipid, &e->sr);
-    t = _toolErr;
-    if (t) terr = t;
-    e->terr = terr;
-    DecBusy();
+    switch (flag)
+    {
+    case 0:
+        if (readable(e))
+        {
+            *outflag = 1;
+            return 0;
+        }
+        break;
+    case 1:
+        //always writable. [?]
+        *outflag = 1;
+        return 0;
+        break;
+    case 2:
+        // no exceptions.
+        return 0;
+        break;
+    default:
+        return 0;
+        break;
+    }
+    
+    
+    // main loop will call sel flag when readable.
+
+    SEI();
+    
+    if (e->select_rd_pid == 0xffff)
+        e->select_rd_pid = pid;
+    else if (e->select_rd_pid != pid)
+        e->select_rd_collision = 1;
         
-    if (e->sr.srState == TCPSLISTEN)
-    {
-        // for a listen socket, "read" means "accept".
-        switch (flag)
-        {
-        case 0:
-            if (e->sr.srAcceptCount)
-                *(int *)p3 = 1;
-            break;
-        }
-    
-    }
-    else
-    {
-        switch (flag)
-        {
-        case 0:
-            // readable.
-            *(int *)p3 = readable(e);
-            break;
-            
-        case 1:
-            // writable.
-            *(int *)p3 = writable(e);
-            break;
-            
-        case 2:
-            // exception.
-            *(int *)p3 = exceptable(e);
-            break;                
-
-        }
-    
-    }
-    
+    CLI();
     
     return 0;
 }
