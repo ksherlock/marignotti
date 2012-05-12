@@ -67,12 +67,16 @@ extern Word MyID;
 extern Word Debug;
 
 typedef struct xsockaddr_in {
-  short sin_family;
+  unsigned short sin_family;
   unsigned short sin_port;
   unsigned long sin_addr;
-  char sin_zero[8];
+  unsigned char sin_zero[8];
 } xsockaddr_in;
 
+typedef struct xsockaddr {
+    unsigned short sa_family;
+    unsigned char sa_data[14];
+} xsockaddr;
 
 #define IncBusy() asm { jsl 0xE10064 }
 #define DecBusy() asm { jsl 0xE10068 }
