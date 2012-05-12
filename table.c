@@ -208,8 +208,9 @@ void process_table(void)
                 {
                 case kCommandRead:
                     // block until data available.
-                    if (e->sr.srRcvQueued >= e->cookie
-                        || expired
+                    if (expired
+                        || e->sr.srRcvQueued >= e->cookie
+                        || e->sr.srRcvQueued >= e->_RCVLOWAT
                         || terr)
                     {
                         sig = 1;
