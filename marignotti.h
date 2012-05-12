@@ -52,6 +52,7 @@ typedef struct Entry {
 } Entry;
 
 extern Word MyID;
+extern Word Debug;
 
 typedef struct xsockaddr_in {
   short sin_family;

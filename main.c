@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include <gno/gno.h>
 
@@ -16,6 +17,7 @@
 int semID = 0;
 Word MyID;
 Word QuitFlag;
+Word Debug;
 
 #pragma databank 0
 void signal_handler(int sig, int code)
@@ -102,11 +104,60 @@ void ShutDown(word flags, Boolean force, displayPtr fx)
     }
 }
 
+#define VERSION "0.2"
+static void version(void)
+{
+    fputs("Marignotti " VERSION "\n", stdout);
+}
+
+static void help(void)
+{
+    fputs("Marignotti " VERSION "\n", stdout);
+    fputs("Marignotti is a TCP driver for GNO/ME 2.0.6\n", stdout);
+    fputs("Marinetti 3.0b3 or newer is required.\n", stdout);
+    fputs("\n", stdout);
+    fputs("Usage: marignotti [-h -d -v]\n", stdout);
+    fputs("-h show help information.\n", stdout);
+    fputs("-v show version information.\n", stdout);
+    fputs("-d increase debug level [Sweet-16 only].\n", stdout);
+    
+}
 
 int main(int argc, char **argv)
 {
 
   int flags;
+  int ch;
+  
+  
+  _beginStackCheck();
+  
+  Debug = 0;
+  QuitFlag = 0;  
+
+  while ((ch = getopt(argc, argv, "dhv")) != EOF)
+  {
+    switch (ch)
+    {
+    case 'd':
+        Debug++;
+        break;
+        
+    case 'h':
+    case '?':
+        help();
+        return 0;
+        break;
+
+    case 'v':
+        version();
+        return 0;
+        break;
+    }
+  
+  }
+
+  
 
   MyID = MMStartUp();
 
@@ -118,7 +169,6 @@ int main(int argc, char **argv)
     
   InstallNetDriver(driver, 0);
 
-  QuitFlag = 0;  
   
   signal(SIGQUIT, signal_handler);
   signal(SIGINT, signal_handler);  
@@ -136,7 +186,7 @@ int main(int argc, char **argv)
     
     process_table();
     
-    asm { cop 0x7f }
+    Resched();
   }
   
   InstallNetDriver(NULL, 0);
@@ -145,6 +195,8 @@ int main(int argc, char **argv)
   destroy_table();
   
   ShutDown(flags, 0, DisplayMessage);
+  
+  _reportStack();
   
   return 0;
 } 
