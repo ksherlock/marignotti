@@ -55,10 +55,12 @@ void s16_debug_puts(const char *str)
 }
 
 
-void s16_debug_dump(const char *bytes, unsigned length)
+void s16_debug_dump(const void *bytes, unsigned length)
 {
     static const char *HexMap = "0123456789abcdef";
 
+    const char *cp = (const char *)bytes;
+    
     if (!CheckSweet16()) return;
 
     while (length)
@@ -71,7 +73,7 @@ void s16_debug_dump(const char *bytes, unsigned length)
         
         for (i = 0, j = 0; i < l; ++i)
         {
-            unsigned x = bytes[i];
+            unsigned x = cp[i];
             buffer[j++] = HexMap[x >> 4];
             buffer[j++] = HexMap[x & 0x0f];
             j++;
@@ -84,7 +86,7 @@ void s16_debug_dump(const char *bytes, unsigned length)
         s16_debug_puts(buffer);
     
         length -= l;
-        bytes += l;
+        cp += l;
     }
 
 }
@@ -108,19 +110,6 @@ void s16_debug_srbuff(const srBuff *sb)
 {
     if (!CheckSweet16()) return;
 
-/*
-    s16_debug_printf("%04x %04x %08lx %08lx %08lx %04x %04x %04x",
-        sb->srState,
-        sb->srNetworkError,
-        sb->srSndQueued,
-        sb->srRcvQueued,
-        sb->srDestIP,
-        sb->srDestPort,
-        sb->srConnectType, 
-        sb->srAcceptCount
-    );
-*/
-
     s16_debug_printf("             srState: $%04x", sb->srState);
     s16_debug_printf("      srNetworkError: $%04x", sb->srNetworkError);
     s16_debug_printf("         srSndQueued: $%08lx", sb->srSndQueued);
@@ -132,6 +121,16 @@ void s16_debug_srbuff(const srBuff *sb)
 
 }
 
+void s16_debug_rrbuff(const rrBuff *rr)
+{
+    if (!CheckSweet16()) return;
+
+    s16_debug_printf("         rrBuffCount: $%08lx", rr->rrBuffCount);
+    s16_debug_printf("        rrBuffHandle: $%08lx", rr->rrBuffHandle);
+    s16_debug_printf("          rrMoreFlag: $%04x", rr->rrMoreFlag);
+    s16_debug_printf("          rrPushFlag: $%04x", rr->rrPushFlag);
+    s16_debug_printf("        rrUrgentFlag: $%04x", rr->rrUrgentFlag);
+}
 
 
 void s16_debug_tcp(unsigned ipid)
