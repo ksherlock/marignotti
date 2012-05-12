@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <sys/socket.h>
 
+#include "s16debug.h"
 
 #pragma noroot
 #pragma optimize 79
@@ -16,6 +17,13 @@ int mattach(int type, void *p1, void *p2, void *p3, void *p4, void *p5)
     
     // p2 = selwakeup.
     int protocol = *(int *)p3;
+    
+    if (Debug > 0)
+    {
+        s16_debug_printf("socket type = %d protocol = %d",
+            type, protocol);
+    }
+    
     
     if (type != SOCK_STREAM) return ESOCKTNOSUPPORT;
     //if (protocol != 6) return EPROTONOSUPPORT;

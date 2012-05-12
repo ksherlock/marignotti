@@ -155,11 +155,13 @@ void process_table(void)
                 if (t) terr = t;
                 e->terr = terr;
                 
-                s16_debug_printf("process: %04x : %04x : expired: %d", 
-                  e->ipid, command, expired);
+                if (Debug > 2)
+                {
+                    s16_debug_printf("- ipid: %d command %d", 
+                        e->ipid, command);
                   
-                s16_debug_srbuff(&e->sr);
-                
+                    s16_debug_srbuff(&e->sr);
+                }
                 state = e->sr.srState;
                 sig = 0;
                 

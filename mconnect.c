@@ -2,10 +2,18 @@
 #include <gno/kerntool.h>
 #include <errno.h>
 #include <misctool.h>
+
 #include "s16debug.h"
 
 #pragma noroot
 #pragma optimize 79
+
+union split {
+    
+    LongWord i32;
+    Word i16[2];
+    Byte i8[4];
+};
 
 int mconnect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
 {
@@ -27,6 +35,14 @@ int mconnect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
         lda <port
         xba
         sta <port
+    }
+
+    if (Debug > 0)
+    {
+        union split s;
+        s.i32 = sin->sin_addr;
+        s16_debug_printf("connect address = %d.%d.%d.%d port = %d",
+            s.i8[0], s.i8[1], s.i8[2], s.i8[3], port);
     }
 
     // check if already connected.
@@ -77,8 +93,6 @@ int mconnect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
         
         xerrno = queue_command(e, kCommandConnect, 0, timeout);
         
-        s16_debug_printf("mconnect: %d - %d - %d", 
-          e->semaphore, xerrno, e->command);
         
         // hmmm .. should these abort?
         if (xerrno == EINTR)

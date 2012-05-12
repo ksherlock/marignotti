@@ -4,6 +4,8 @@
 
 #include <misctool.h>
 
+#include "s16debug.h"
+
 #pragma noroot
 #pragma optimize 79
 
@@ -22,7 +24,11 @@ int mread(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     LongWord nbytes = *(LongWord *)p2;
     *(LongWord *)p2 = 0;
 
-    
+    if (Debug > 0)
+    {
+        s16_debug_printf("read nbytes = %ld", nbytes);
+    }
+
     count = e->_RCVLOWAT;
     if (count > nbytes) count = nbytes;
 
@@ -53,7 +59,13 @@ int mread(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
             DecBusy();
             if (t) terr = t;
 
-            *(LongWord *)p2 = rr.rrBuffCount;    
+            *(LongWord *)p2 = rr.rrBuffCount;   
+            
+            if (Debug > 1)
+            {
+                s16_debug_dump(buffer, (Word)rr.rrBuffCount);
+            }
+             
         }
         return 0;
     }
@@ -100,6 +112,12 @@ int mread(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
                 DecBusy();
                                 
                 *(LongWord *)p2 = rr.rrBuffCount;
+                
+                if (Debug > 1)
+                {
+                    s16_debug_dump(buffer, (Word)rr.rrBuffCount);
+                }
+                            
             }
             return 0;
         }

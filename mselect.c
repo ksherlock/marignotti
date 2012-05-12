@@ -2,6 +2,8 @@
 #include <gno/kerntool.h>
 #include <errno.h>
 
+#include "s16debug.h"
+
 #pragma noroot
 #pragma optimize 79
 
@@ -74,6 +76,12 @@ int mselect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     int flag = *(int *)p3;
 
     *(int *)p3 = 0;
+
+
+    if (Debug > 0)
+    {
+        s16_debug_printf("select pid = %5d flag = %d", pid, flag);
+    }
 
     IncBusy();
     terr = TCPIPStatusTCP(e->ipid, &e->sr);
