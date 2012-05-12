@@ -1,6 +1,8 @@
 #include "marignotti.h"
 #include <gno/kerntool.h>
 #include <errno.h>
+#include <sys/socket.h>
+
 #include <misctool.h>
 
 #include "s16debug.h"
@@ -43,6 +45,15 @@ int mconnect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
         s.i32 = sin->sin_addr;
         s16_debug_printf("connect address = %d.%d.%d.%d port = %d",
             s.i8[0], s.i8[1], s.i8[2], s.i8[3], port);
+    }
+
+    if (e->_TYPE == SOCK_DGRAM)
+    {
+        IncBusy();
+        TCPIPSetNewDestination(e->ipid, sin->sin_addr, port);
+        t = _toolErr;
+        DecBusy();
+        return 0;    
     }
 
     // check if already connected.
