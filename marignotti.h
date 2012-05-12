@@ -12,6 +12,8 @@ enum {
     kCommandAbortAndLogout
 };
 
+typedef void (*selwakeupfx)(int collision, int pid);
+
 typedef struct Entry {
     struct Entry *next;
     
@@ -24,6 +26,16 @@ typedef struct Entry {
     Word command;
     LongWord cookie;
     LongWord timeout;
+
+    Word socket_type;
+    
+    // select magic.
+    selwakeupfx select_fx;
+    int select_rd_pid;
+    int select_wr_pid;
+    
+    unsigned select_rd_collision:1;
+    unsigned select_wr_collision:1;
 
     // shutdown(2)    
     unsigned _SHUT_RD:1;

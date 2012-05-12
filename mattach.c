@@ -16,6 +16,7 @@ int mattach(int type, void *p1, void *p2, void *p3, void *p4, void *p5)
     Entry *e;
     
     // p2 = selwakeup.
+    selwakeupfx fx = (selwakeupfx)p2;
     int protocol = *(int *)p3;
     
     if (Debug > 0)
@@ -42,6 +43,9 @@ int mattach(int type, void *p1, void *p2, void *p3, void *p4, void *p5)
         TCPIPLogout(ipid);
         return ENOMEM;
     }
+    e->select_fx = fx;
+    e->socket_type = type;
+    
     *(Word *)p1 = ipid;
     
     return 0;
