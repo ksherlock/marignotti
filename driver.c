@@ -131,6 +131,7 @@ int driver(
         break;
         
     case PRU_RCVOOB:
+        return mreadoob(e, p1, p2, p3, p4, p5);
         break;
         
     case PRU_SEND:
@@ -143,6 +144,9 @@ int driver(
         break;
         
     case PRU_SENDOOB:
+        // OOB is always inline.  so there.
+        // this is never called via ReadGS.
+        return mwrite(e, p1, p2, p3, p4, p5);
         break;
         
     case PRU_SENSE:

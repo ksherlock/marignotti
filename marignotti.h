@@ -106,6 +106,8 @@ int driver(int, int,  void *, void *, void *, void *, void *);
 int mattach(int ipid, void *p1, void *p2, void *p3, void *p4, void *p5);
 
 int mread(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
+int mreadoob(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5);
+
 int mwrite(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 int mconnect(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 int mbind(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);

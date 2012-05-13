@@ -158,6 +158,32 @@ static int sock_read(
 
 }
 
+int mreadoob(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
+{
+    // called via recv, recvfrom.
+    // OOB is always inline, therefore an OOB read will
+    // just return 0.
+    // todo -- just treat as regular read?
+    
+    char *buffer = (char *)p1;
+    LongWord nbytes = *(LongWord *)p2;
+    xsockaddr *addr = (xsockaddr *)p3;
+    int addrlen = p4 ? *(int *)p4 : 0;
+    
+    LongWord *outbytes = (LongWord *)p2;
+    
+    *outbytes = 0;
+    
+
+    if (Debug > 0)
+    {
+        s16_debug_printf("oob read nbytes = %ld", nbytes);
+    }
+        
+    return 0;
+}
+
+
 // called through ReadGS, recv, recvfrom
 int mread(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
 {
