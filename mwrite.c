@@ -25,6 +25,7 @@ int mwrite(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     
     *outbytes = 0;
     
+    
     if (Debug > 0)
     {
         s16_debug_printf("write nbytes = %ld", nbytes);
@@ -39,6 +40,8 @@ int mwrite(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
         s16_debug_puts("");
         s16_debug_dump(buffer, (Word)nbytes);
     }
+
+    if (e->_SHUT_WR) return EPIPE;
     
     if (e->_TYPE == SOCK_DGRAM)
     {

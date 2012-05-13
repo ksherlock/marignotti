@@ -50,6 +50,8 @@ static int sock_read(
     Word terr;
     rrBuff rr;
 
+    if (e->_SHUT_RD)
+        return 0;
     
     if (e->_TYPE == SOCK_DGRAM)
     {
