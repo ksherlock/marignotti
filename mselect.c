@@ -85,7 +85,14 @@ boolean readable(Entry *e)
     if (state == TCPSCLOSED || state > TCPSESTABLISHED)
         return true;
     
-
+    /*
+     * The receive low-water mark is the amount of data that must be 
+     * in the socket receive buffer for select to return "readable." 
+     * It defaults to 1 for TCP, UDP, and SCTP sockets.
+     *
+     * - UNIX Network Programming Volume 1, Third Edition, page 169
+     *
+     */
     if (e->sr.srRcvQueued >= e->_RCVLOWAT)
         return true;
         
