@@ -227,7 +227,13 @@ void process_table(void)
                         sig = 1;
                     }
                     break;
-                    
+                
+                case kCommandAccept:
+                    if (e->sr.srAcceptCount > 0)
+                    {
+                        sig = 1;
+                    }
+                    break;
                     
                 case kCommandConnect:
                     // block until connection established.

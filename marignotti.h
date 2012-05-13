@@ -7,9 +7,10 @@ enum {
     kCommandConnect,
     kCommandDisconnect,
     kCommandDisconnectAndLogout,
+    kCommandAbortAndLogout,
     kCommandRead,
     kCommandWrite,
-    kCommandAbortAndLogout
+    kCommandAccept
 };
 
 typedef void (*selwakeupfx)(int collision, int pid);
@@ -116,13 +117,15 @@ int mdisconnect(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 
 int mshutdown(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 
-
 int mgetsockopt(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 int msetsockopt(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 
 int mioctl(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 int mgetsockname(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 int mselect(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
+
+int maccept(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5);
+int mlisten(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5);
 
 
 

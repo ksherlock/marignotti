@@ -69,6 +69,7 @@ int driver(
         break;
         
     case PRU_ACCEPT:
+        return maccept(e, p1, p2, p3, p4, p5);
         break;
         
     case PRU_ATTACH:
@@ -112,6 +113,7 @@ int driver(
         break;
         
     case PRU_LISTEN:
+        return mlisten(e, p1, p2, p3, p4, p5);
         break;
         
     case PRU_PEERADDR:
