@@ -5,6 +5,9 @@
 
 #include <sys/socket.h>
 
+#include "s16debug.h"
+
+
 #pragma noroot
 #pragma optimize 79
 
@@ -16,6 +19,12 @@ int mgetsockname(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     
     xsockaddr_in *sock_addr = (xsockaddr_in *)p3;
     int *addrlen = (int *)p4;
+
+    if (Debug > 0)
+    {
+        s16_debug_printf("getsockname");
+    }
+    
     
     if (!addrlen) return EINVAL;
     if (!sock_addr) return EINVAL;
@@ -24,7 +33,10 @@ int mgetsockname(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
 
     // bsd { has char sin_len; char sin_family; ... }
     // gno has { short sin_family; ... }
-
+    
+    
+    // TODO -- is this only true for servers?
+    // should it use TCPIPGetDestination for clients?
     
     IncBusy();
     port = TCPIPGetSourcePort(e->ipid);
