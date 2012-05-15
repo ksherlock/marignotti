@@ -56,10 +56,19 @@ int mbind(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     
     // address component is ignored -- only port is used.
 
-    IncBusy();
-    TCPIPSetSourcePort(e->ipid, port);
-    DecBusy();
+    // bind w/ port 0 means the system should pick a port.
+    // marinetti picks a port at TCPIPLogin time, so no need
+    // to do anything here.
     
+    // Note: TCPIPSetSourcePort does not check if the port is free.
+    
+    // todo -- return EACCES if reserved port && !root. 
+    if (port)
+    {
+        IncBusy();
+        TCPIPSetSourcePort(e->ipid, port);
+        DecBusy();
+    }
     return 0;
 
 }
