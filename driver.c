@@ -116,7 +116,7 @@ int driver(
         
     case PRU_BIND:
         // KERNbind(int fd, struct sockaddr *my_addr, int addrlen, int *ERRNO)
-        return mbind(socknum, p1, p2, p3, p4, p5);
+        return mbind(e, p1, p2, p3, p4, p5);
         break;
         
     case PRU_CONNECT:

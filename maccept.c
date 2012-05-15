@@ -50,10 +50,10 @@ static int sock_accept(
         DecBusy();
               
         tmp.sin_family = AF_INET;
-        tmp.sin_port = port;
+        tmp.sin_port = dr.drDestPort;
         tmp.sin_addr = dr.drDestIP;
         
-        copy_address(&tmp, addr, addrlen);
+        copy_addr(&tmp, addr, addrlen);
     }
     
     *newfd = ipid;

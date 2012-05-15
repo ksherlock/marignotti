@@ -26,8 +26,8 @@ int mgetsockname(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     }
     
     
-    if (!addrlen) return EINVAL;
-    if (!sock_addr) return EINVAL;
+    if (!addrlen || !addr) return EINVAL;
+    if (!*addrlen) return 0;
 
     tmp.sin_family = AF_INET;
     IncBusy();

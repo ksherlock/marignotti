@@ -24,8 +24,8 @@ int mgetpeername(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
         s16_debug_printf("getpeername");
     }
     
-    if (!addrlen) return EINVAL;
-    if (!sock_addr) return EINVAL;
+    if (!addrlen || !addr) return EINVAL;
+    if (!*addrlen) return 0;
     
     IncBusy();
     TCPIPGetDestination(e->ipid, &dr);
