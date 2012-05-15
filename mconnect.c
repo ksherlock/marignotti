@@ -10,12 +10,7 @@
 #pragma noroot
 #pragma optimize 79
 
-union split {
-    
-    LongWord i32;
-    Word i16[2];
-    Byte i8[4];
-};
+
 
 int mconnect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
 {
@@ -29,10 +24,10 @@ int mconnect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     // return EINPROGRESS 
     //
     
-    xsockaddr_in *sin = (xsockaddr_in *)p3;
-    int addrlen = *(int *)p4;
+    xsockaddr_in *addr = (xsockaddr_in *)p3;
+    int addrlen = p4 ? *(int *)p4 : 0;
     
-    port = sin->sin_port; 
+    port = addr->sin_port; 
     asm {
         lda <port
         xba
@@ -41,16 +36,21 @@ int mconnect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
 
     if (Debug > 0)
     {
-        union split s;
-        s.i32 = sin->sin_addr;
-        s16_debug_printf("connect address = %d.%d.%d.%d port = %d",
-            s.i8[0], s.i8[1], s.i8[2], s.i8[3], port);
+        union xsplit s;
+        s.i32 = addr->sin_addr;
+        s16_debug_printf("connect family = %d address = %d.%d.%d.%d port = %d",
+            addr->sin_family,
+            s.i8[0], s.i8[1], s.i8[2], s.i8[3], 
+            port);
     }
+
+    if (addrlen < 8 || !addr) return EINVAL;
+    if (addr->sin_family != AF_INET) return EINVAL;
 
     if (e->_TYPE == SOCK_DGRAM)
     {
         IncBusy();
-        TCPIPSetNewDestination(e->ipid, sin->sin_addr, port);
+        TCPIPSetNewDestination(e->ipid, addr->sin_addr, port);
         t = _toolErr;
         DecBusy();
         return 0;    
@@ -72,7 +72,7 @@ int mconnect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     
 
     IncBusy();
-    TCPIPSetNewDestination(e->ipid, sin->sin_addr, port);
+    TCPIPSetNewDestination(e->ipid, addr->sin_addr, port);
     t = _toolErr;
     DecBusy();
     

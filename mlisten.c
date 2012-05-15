@@ -13,6 +13,7 @@
 
 int mlisten(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
 {
+    Word port;
     Word terr;
     Word t;
     
