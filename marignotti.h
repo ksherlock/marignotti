@@ -52,7 +52,7 @@ typedef struct Entry {
     unsigned _OOBINLINE:1;
     unsigned _LINGER:1;
     unsigned _NOSIGPIPE:1;
-    
+        
     Word _TYPE;
     
     LongWord _SNDLOWAT;
@@ -71,13 +71,19 @@ typedef struct xsockaddr_in {
   unsigned short sin_family;
   unsigned short sin_port;
   unsigned long sin_addr;
-  unsigned char sin_zero[8];
+  //unsigned char sin_zero[8];
 } xsockaddr_in;
 
 typedef struct xsockaddr {
     unsigned short sa_family;
     unsigned char sa_data[14];
 } xsockaddr;
+
+union xsplit {  
+    LongWord i32;
+    Word i16[2];
+    Byte i8[4];
+};
 
 #define IncBusy() asm { jsl 0xE10064 }
 #define DecBusy() asm { jsl 0xE10068 }
@@ -98,6 +104,7 @@ void process_table(void);
 Entry *find_entry(Word ipid);
 Entry *create_entry(Word ipid);
 
+void copy_addr(xsockaddr_in *src, xsockaddr_in *dest, int *addrlen);
 
 
 // driver stuff.
@@ -122,6 +129,7 @@ int msetsockopt(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 
 int mioctl(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 int mgetsockname(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
+int mgetpeername(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 int mselect(Entry *, void *p1, void *p2, void *p3, void *p4, void *p5);
 
 int maccept(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5);

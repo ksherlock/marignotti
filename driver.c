@@ -11,7 +11,44 @@ int block(int sem)
 {
     int xerrno = 0;
     Kswait(sem, &xerrno);
+
     return xerrno;
+}
+
+
+void copy_addr(xsockaddr_in *src, xsockaddr_in *dest, int *addrlen)
+{
+    int len;
+    
+    // bytswap the port.
+    asm {
+        ldy #2
+        lda [src],y
+        xba
+        sta [src],y
+    }
+
+    len = 8;
+    if (*addrlen < 8)
+        len = *addrlen;
+    else
+        *addrlen = 8;
+    
+    // data is truncated if there isn't enough space.
+    asm {
+        ldx <len
+        beq done
+        ldy #0
+        sep #0x20
+    loop:
+        lda [src],y
+        sta [dest],y
+        iny
+        dex
+        bne loop
+        rep #0x20
+    done:
+    }
 }
 
 int queue_command(Entry *e, Word command, LongWord cookie, LongWord timeout)
@@ -117,6 +154,7 @@ int driver(
         break;
         
     case PRU_PEERADDR:
+        return mgetpeername(e, p1, p2, p3, p4, p5);
         break;
         
     case PRU_RCVD:

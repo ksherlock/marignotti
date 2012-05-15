@@ -40,35 +40,20 @@ static int sock_accept(
     child->select_fx = fx;
     
     // address...
-    if (addr && addrlen)
+    if (addr && addrlen && *addrlen)
     {
-        if (*addrlen >= 8)
-        {
-            destRec dr;
-            Word port;
+        destRec dr;
+        xsockaddr_in tmp;
 
-            IncBusy();
-            TCPIPGetDestination(ipid, &dr);
-            DecBusy();
-            
-            port = dr.drDestPort;
-            
-            asm {
-                lda <port
-                xba
-                sta <port
-            }            
-            addr->sin_port = port;
-            addr->sin_addr = dr.drDestIP;
-            addr->sin_family = AF_INET;
-            
-            *addrlen = 8;
-        }
-        else
-        {
-            *addrlen = 0;
-        }
-
+        IncBusy();
+        TCPIPGetDestination(ipid, &dr);
+        DecBusy();
+              
+        tmp.sin_family = AF_INET;
+        tmp.sin_port = port;
+        tmp.sin_addr = dr.drDestIP;
+        
+        copy_address(&tmp, addr, addrlen);
     }
     
     *newfd = ipid;
