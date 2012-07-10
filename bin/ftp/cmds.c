@@ -46,6 +46,29 @@ extern char reply_string[];
 char *mname;
 jmp_buf jabort;
 
+
+/*
+ * Toggle a variable
+ */
+int togglevar(int argc, char ** argv, int *var, const char *mesg)
+{
+	if (argc < 2) {
+		*var = !*var;
+	} else if (argc == 2 && strcasecmp(argv[1], "on") == 0) {
+		*var = 1;
+	} else if (argc == 2 && strcasecmp(argv[1], "off") == 0) {
+		*var = 0;
+	} else {
+		printf("usage: %s [ on | off ]\n", argv[0]);
+		return (-1);
+	}
+	if (mesg)
+		printf("%s %s.\n", mesg, onoff(*var));
+	return (*var);
+}
+
+
+
 /*
  * `Another' gets another argument, and stores the new argc and argv.
  * It reverts to the top level (via main.c's intr()) on EOF/error.
@@ -830,9 +853,7 @@ int i;
 /*VARARGS*/
 void setbell (int argc, char **argv)
 {
-	bell = !bell;
-	printf("Bell mode %s.\n", onoff(bell));
-	code = bell;
+	code = togglevar(argc, argv, &bell, "Bell mode");
 }
 
 /*
@@ -841,9 +862,7 @@ void setbell (int argc, char **argv)
 /*VARARGS*/
 void settrace (int argc, char **argv)
 {
-	trace = !trace;
-	printf("Packet tracing %s.\n", onoff(trace));
-	code = trace;
+	code = togglevar(argc, argv, &trace, "Packet tracing");
 }
 
 /*
@@ -866,9 +885,7 @@ void sethash (int argc, char **argv)
 /*VARARGS*/
 void setverbose (int argc, char **argv)
 {
-	verbose = !verbose;
-	printf("Verbose mode %s.\n", onoff(verbose));
-	code = verbose;
+	code = togglevar(argc, argv, &verbose, "Verbose mode");
 }
 
 /*
@@ -877,9 +894,7 @@ void setverbose (int argc, char **argv)
 /*VARARGS*/
 void setport (int argc, char **argv)
 {
-	sendport = !sendport;
-	printf("Use of PORT cmds %s.\n", onoff(sendport));
-	code = sendport;
+	code = togglevar(argc, argv, &sendport, "Use of PORT cmds");
 }
 
 /*
@@ -889,9 +904,7 @@ void setport (int argc, char **argv)
 /*VARARGS*/
 void setprompt (int argc, char **argv)
 {
-	interactive = !interactive;
-	printf("Interactive mode %s.\n", onoff(interactive));
-	code = interactive;
+	code = togglevar(argc, argv, &interactive, "Interactive mode");
 }
 
 /*
@@ -901,9 +914,7 @@ void setprompt (int argc, char **argv)
 /*VARARGS*/
 void setglob (int argc, char **argv)
 {
-	doglob = !doglob;
-	printf("Globbing %s.\n", onoff(doglob));
-	code = doglob;
+	code = togglevar(argc, argv, &doglob, "Globbing");
 }
 
 /*
@@ -978,6 +989,19 @@ static char buf[MAXPATHLEN];
 	printf("Local directory now %s\n", getwd(buf));
 	code = 0;
 }
+
+void lpwd(int argc, char **argv)
+{
+	static char buf[MAXPATHLEN];
+	
+	if (getcwd(buf, sizeof(buf)) != NULL)
+		    printf("Local directory %s\n", buf);
+	else
+		    fprintf(stderr, "getcwd: %s\n", strerror(errno));
+	code = 0;
+}
+
+
 
 /*
  * Delete a single file.
@@ -1844,18 +1868,21 @@ LOOP:
 	return(new);
 }
 
+
+void setpassive(int argc, char **argv)
+{
+	code = togglevar(argc, argv, &passivemode,
+		verbose ? "Passive mode" : (char *)NULL);
+}
+
 void setsunique (int argc, char **argv)
 {
-	sunique = !sunique;
-	printf("Store unique %s.\n", onoff(sunique));
-	code = sunique;
+	code = togglevar(argc, argv, &sunique, "Store unique");
 }
 
 void setrunique (int argc, char **argv)
 {
-	runique = !runique;
-	printf("Receive unique %s.\n", onoff(runique));
-	code = runique;
+	code = togglevar(argc, argv, &runique, "Receive unique");
 }
 
 /* change directory to perent directory */

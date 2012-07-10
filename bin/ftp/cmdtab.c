@@ -34,6 +34,7 @@ char	hashhelp[] =	"toggle printing `#' for each buffer transferred";
 char	helphelp[] =	"print local help information";
 char	idlehelp[] =	"get (set) idle timer on remote side";
 char	lcdhelp[] =	"change local working directory";
+char    lpwdhelp[] =    "print local working directory";
 char	lshelp[] =	"list contents of remote directory";
 char	macdefhelp[] =  "define a macro";
 char	mdeletehelp[] =	"delete multiple files";
@@ -48,6 +49,7 @@ char	newerhelp[] =	"get file if remote file is newer than local file ";
 char	nlisthelp[] =	"nlist contents of remote directory";
 char	nmaphelp[] =	"set templates for default file name mapping";
 char	ntranshelp[] =	"set translation table for default file name mapping";
+char	passivehelp[] =	"enter passive transfer mode";
 char	porthelp[] =	"toggle use of PORT cmd for each data connection";
 char	prompthelp[] =	"force interactive prompting on multiple commands";
 char	proxyhelp[] =	"issue command on alternate connection";
@@ -64,7 +66,9 @@ char	rmtstatushelp[]="show status of remote machine";
 char	runiquehelp[] = "toggle store unique for local files";
 char	resethelp[] =	"clear queued command replies";
 char	sendhelp[] =	"send one file";
-char	sitehelp[] =	"send site specific command to remote server\n\t\tTry \"rhelp site\" or \"site help\" for more information";
+char	sitehelp[] =	"send site specific command to remote server\n"
+			"\t\tTry \"rhelp site\" or \"site help\" "
+			"for more information";
 char	shellhelp[] =	"escape to the shell";
 char	sizecmdhelp[] = "show size of remote file";
 char	statushelp[] =	"show current status";
@@ -93,8 +97,8 @@ struct cmd cmdtab[] = {
 	{ "chmod",	 chmodhelp,	0,	1,	1,	do_chmod },
 	{ "close",	 disconhelp,	0,	1,	1,	disconnect },
 	{ "cr",		 crhelp,	0,	0,	0,	setcr },
-	{ "delete",	 deletehelp,	0,	1,	1,	delete },
 	{ "debug",	 debughelp,	0,	0,	0,	ftpsetdebug },
+	{ "delete",	 deletehelp,	0,	1,	1,	delete },
 	{ "dir",	 dirhelp,	1,	1,	1,	ls },
 	{ "disconnect",	 disconhelp,	0,	1,	1,	disconnect },
 	{ "form",	 formhelp,	0,	1,	1,	setform },
@@ -105,6 +109,7 @@ struct cmd cmdtab[] = {
 	{ "idle",	 idlehelp,	0,	1,	1,	idle },
 	{ "image",	 binaryhelp,	0,	1,	1,	setbinary },
 	{ "lcd",	 lcdhelp,	0,	0,	0,	lcd },
+	{ "lpwd",	 lpwdhelp,	0,	0,	0,	lpwd },
 	{ "ls",		 lshelp,	1,	1,	1,	ls },
 	{ "macdef",	 macdefhelp,	0,	0,	0,	macdef },
 	{ "mdelete",	 mdeletehelp,	1,	1,	1,	mdelete },
@@ -116,38 +121,39 @@ struct cmd cmdtab[] = {
 	{ "modtime",	 modtimehelp,	0,	1,	1,	modtime },
 	{ "mput",	 mputhelp,	1,	1,	1,	mput },
 	{ "newer",	 newerhelp,	1,	1,	1,	newer },
-	{ "nmap",	 nmaphelp,	0,	0,	1,	setnmap },
 	{ "nlist",	 nlisthelp,	1,	1,	1,	ls },
+	{ "nmap",	 nmaphelp,	0,	0,	1,	setnmap },
 	{ "ntrans",	 ntranshelp,	0,	0,	1,	setntrans },
 	{ "open",	 connecthelp,	0,	0,	1,	setpeer },
+	{ "passive",	 passivehelp,	0,	0,	0,	setpassive },
 	{ "prompt",	 prompthelp,	0,	0,	0,	setprompt },
 	{ "proxy",	 proxyhelp,	0,	0,	1,	doproxy },
-	{ "sendport",	 porthelp,	0,	0,	0,	setport },
 	{ "put",	 sendhelp,	1,	1,	1,	put },
 	{ "pwd",	 pwdhelp,	0,	1,	1,	pwd },
 	{ "quit",	 quithelp,	0,	0,	0,	quit },
 	{ "quote",	 quotehelp,	1,	1,	1,	quote },
 	{ "recv",	 receivehelp,	1,	1,	1,	get },
 	{ "reget",	 regethelp,	1,	1,	1,	reget },
-	{ "rstatus",	 rmtstatushelp,	0,	1,	1,	rmtstatus },
-	{ "rhelp",	 remotehelp,	0,	1,	1,	rmthelp },
 	{ "rename",	 renamehelp,	0,	1,	1,	renamefile },
 	{ "reset",	 resethelp,	0,	1,	1,	reset },
 	{ "restart",	 restarthelp,	1,	1,	1,	restart },
+	{ "rhelp",	 remotehelp,	0,	1,	1,	rmthelp },
 	{ "rmdir",	 rmdirhelp,	0,	1,	1,	removedir },
+	{ "rstatus",	 rmtstatushelp,	0,	1,	1,	rmtstatus },
 	{ "runique",	 runiquehelp,	0,	0,	1,	setrunique },
 	{ "send",	 sendhelp,	1,	1,	1,	put },
+	{ "sendport",	 porthelp,	0,	0,	0,	setport },
 	{ "site",	 sitehelp,	0,	1,	1,	site },
 	{ "size",	 sizecmdhelp,	1,	1,	1,	sizecmd },
 	{ "status",	 statushelp,	0,	0,	1,	status },
 	{ "struct",	 structhelp,	0,	1,	1,	setstruct },
-	{ "system",	 systemhelp,	0,	1,	1,	syst },
 	{ "sunique",	 suniquehelp,	0,	0,	1,	setsunique },
+	{ "system",	 systemhelp,	0,	1,	1,	syst },
 	{ "tenex",	 tenexhelp,	0,	1,	1,	settenex },
 	{ "trace",	 tracehelp,	0,	0,	0,	settrace },
 	{ "type",	 typehelp,	0,	1,	1,	settype },
-	{ "user",	 userhelp,	0,	1,	1,	user },
 	{ "umask",	 umaskhelp,	0,	1,	1,	do_umask },
+	{ "user",	 userhelp,	0,	1,	1,	user },
 	{ "verbose",	 verbosehelp,	0,	0,	0,	setverbose },
 	{ "?",		 helphelp,	0,	0,	1,	help },
 	{ 0 },
