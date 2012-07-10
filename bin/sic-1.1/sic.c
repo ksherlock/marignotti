@@ -6,7 +6,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 #include <unistd.h>
+
+#ifdef __GNO__
+#include <gno/gno.h>
+#endif
+
+#ifdef __ORCAC__
+#pragma optimize 79
+#pragma stacksize 2048 // 1063 bytes ... better safe than sorry.
+#endif
 
 static char *host = "irc.oftc.net";
 static char *port = "ircd";
@@ -30,8 +40,13 @@ pout(char *channel, char *fmt, ...) {
 	vsnprintf(bufout, sizeof bufout, fmt, ap);
 	va_end(ap);
 	t = time(NULL);
+	
+#ifdef __GNO__
+	fprintf(stdout, "%-12s: %s\n", channel, bufout);
+#else
 	strftime(timestr, sizeof timestr, "%D %R", localtime(&t));
 	fprintf(stdout, "%-12s: %s %s\n", channel, timestr, bufout);
+#endif
 }
 
 static void
@@ -138,6 +153,10 @@ main(int argc, char *argv[]) {
 	const char *user = getenv("USER");
 	fd_set rd;
 
+#ifdef __GNO__
+    __REPORT_STACK();
+#endif
+
 	strlcpy(nick, user ? user : "unknown", sizeof nick);
 	for(i = 1; i < argc; i++) {
 		c = argv[i][1];
@@ -157,14 +176,18 @@ main(int argc, char *argv[]) {
 			if(++i < argc) password = argv[i];
 			break;
 		case 'v':
-			eprint("sic-"VERSION", © 2005-2009 Kris Maglione, Anselm R. Garbe, Nico Golde\n");
+			eprint("sic-1.1, (c) 2005-2009 Kris Maglione, Anselm R. Garbe, Nico Golde\n");
 		default:
 			eprint("usage: sic [-h host] [-p port] [-n nick] [-k keyword] [-v]\n");
 		}
 	}
 	/* init */
 	i = dial(host, port);
+#ifdef __GNO__
+	srv = fdopen(i, "rb+");
+#else
 	srv = fdopen(i, "r+");
+#endif
 	/* login */
 	if(password)
 		sout("PASS %s", password);
@@ -175,7 +198,7 @@ main(int argc, char *argv[]) {
 	setbuf(srv, NULL);
 	for(;;) { /* main loop */
 		FD_ZERO(&rd);
-		FD_SET(0, &rd);
+		FD_SET(STDIN_FILENO, &rd);
 		FD_SET(fileno(srv), &rd);
 		tv.tv_sec = 120;
 		tv.tv_usec = 0;
@@ -183,6 +206,7 @@ main(int argc, char *argv[]) {
 		if(i < 0) {
 			if(errno == EINTR)
 				continue;
+            perror(NULL);
 			eprint("sic: error on select():");
 		}
 		else if(i == 0) {
@@ -197,11 +221,12 @@ main(int argc, char *argv[]) {
 			parsesrv(bufin);
 			trespond = time(NULL);
 		}
-		if(FD_ISSET(0, &rd)) {
+		if(FD_ISSET(STDIN_FILENO, &rd)) {
 			if(fgets(bufin, sizeof bufin, stdin) == NULL)
 				eprint("sic: broken pipe\n");
 			parsein(bufin);
 		}
 	}
+
 	return 0;
 }

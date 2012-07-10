@@ -2,6 +2,26 @@
 #include <netdb.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#ifndef __GNO__
+#include <machine/endian.h>
+#endif
+// from freebsd 9.0.0
+
+void *
+memccpy(void *t, const void *f, int c, size_t n)
+{
+
+        if (n) {
+                unsigned char *tp = t;
+                const unsigned char *fp = f;
+                unsigned char uc = c;
+                do {
+                        if ((*tp++ = *fp++) == uc)
+                                return (tp);
+                } while (--n != 0);
+        }
+        return (0);
+}
 
 static void
 eprint(const char *fmt, ...) {
@@ -18,6 +38,31 @@ eprint(const char *fmt, ...) {
 
 static int
 dial(char *host, char *port) {
+#ifdef __GNO__
+	int srv;
+	struct hostent *hp;
+	struct sockaddr_in sin;
+
+	hp = gethostbyname(host);
+    if (hp == NULL)
+		eprint("error: cannot resolve hostname '%s':", host);
+
+
+    srv = socket(hp->h_addrtype, SOCK_STREAM, 0);
+    if (srv < 0)
+        eprint("error: socket");
+        
+	bzero((caddr_t)&sin, sizeof (sin));
+	bcopy(hp->h_addr, (char *)&sin.sin_addr, hp->h_length);
+
+    sin.sin_port = htons(atoi(port));
+
+	if (connect(srv, (struct __SOCKADDR *)&sin, sizeof(sin)) < 0)
+		eprint("error: cannot connect to host '%s'\n", host);
+
+    return srv;
+
+#else
 	static struct addrinfo hints;
 	int srv;
 	struct addrinfo *res, *r;
@@ -38,6 +83,7 @@ dial(char *host, char *port) {
 	if(!r)
 		eprint("error: cannot connect to host '%s'\n", host);
 	return srv;
+#endif
 }
 
 #define strlcpy _strlcpy
