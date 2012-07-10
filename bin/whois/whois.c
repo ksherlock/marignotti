@@ -30,6 +30,9 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+#ifdef __ORCAC__
+#pragma optimize 79
+#endif
 
 #ifndef lint
 static const char copyright[] =
@@ -44,8 +47,10 @@ static char sccsid[] = "@(#)whois.c	8.1 (Berkeley) 6/6/93";
 #endif
 
 #include <sys/cdefs.h>
+#ifndef __GNO__
 #ifndef __APPLE__
 __FBSDID("$FreeBSD: src/usr.bin/whois/whois.c,v 1.41 2004/08/25 15:34:44 mbr Exp $");
+#endif
 #endif
 
 #include <sys/types.h>
@@ -61,6 +66,17 @@ __FBSDID("$FreeBSD: src/usr.bin/whois/whois.c,v 1.41 2004/08/25 15:34:44 mbr Exp
 #include <string.h>
 #include <sysexits.h>
 #include <unistd.h>
+
+#ifdef __GNO__
+
+#include <gno/gno.h>
+
+#undef getc
+#undef putc
+#undef getchar
+#undef putchar
+
+#endif
 
 #define	ABUSEHOST	"whois.abuse.net"
 #define	NICHOST		"whois.crsnic.net"
@@ -91,21 +107,140 @@ const char *ip_whois[] = { LNICHOST, RNICHOST, PNICHOST, BNICHOST, NULL };
 const char *port = DEFAULT_PORT;
 
 static char *choose_server(char *);
+#ifndef __GNO__
 static struct addrinfo *gethostinfo(char const *host, int exit_on_error);
+#endif
+
+#ifndef __GNO__
 #ifdef __APPLE__
 static void s_asprintf(char **ret, const char *format, ...) __attribute__((__format__(printf, 2, 3)));
 #else
 static void s_asprintf(char **ret, const char *format, ...) __printflike(2, 3);
 #endif
+#endif
 static void usage(void);
 static void whois(const char *, const char *, int);
 
+#ifdef __GNO__
+
+/*
+ * Find the first occurrence of find in s, where the search is limited to the
+ * first slen characters of s.
+ */
+char *
+strnstr(const char *s, const char *find, size_t slen)
+{
+		char c, sc;
+		size_t len;
+
+		if ((c = *find++) != '\0') {
+				len = strlen(find);
+				do {
+						do {
+								if (slen-- < 1 || (sc = *s++) == '\0')
+										return (NULL);
+						} while (sc != c);
+						if (len > slen)
+								return (NULL);
+				} while (strncmp(s, find, len) != 0);
+				s--;
+		}
+		return ((char *)s);
+}
+
+// not yet in the standard library.
+size_t
+strnlen(const char *s, size_t maxlen)
+{
+		size_t len;
+
+		for (len = 0; len < maxlen; len++, s++) {
+				if (!*s)
+						break;
+		}
+		return (len);
+}
+
+
+char *
+strndup(const char *str, size_t n)
+{
+		size_t len;
+		char *copy;
+
+		len = strnlen(str, n);
+		if ((copy = malloc(len + 1)) == NULL)
+				return (NULL);
+		memcpy(copy, str, len);
+		copy[len] = '\0';
+		return (copy);
+}
+
+char *
+stpcpy(char * to, const char * from)
+{
+
+		for (; (*to = *from); ++from, ++to);
+		return(to);
+}
+
+
+char *xstrndup(const char *s1, size_t n)
+{
+	char *rv;
+	rv = strndup(s1, n);
+	if (!rv)
+	{
+		err(EX_OSERR, "strndup()");
+	}
+	return rv;
+}
+
+char *xstrdup(const char *s1)
+{
+	char *rv;
+	rv = strdup(s1);
+	if (!rv)
+	{
+		err(EX_OSERR, "strdup()");
+	}
+	return rv;
+}
+
+char *xstrdup2(const char *s1, const char *s2)
+{
+	int l1, l2;
+	char *rv;
+	char *tmp;
+	
+	l1 = strlen(s1);
+	l2 = strlen(s2);
+
+	
+	rv = (char *)malloc(l1 + l2 + 1);
+	if (!rv)
+	{
+		err(EX_OSERR, "malloc()");
+	}
+	
+	tmp = stpcpy(rv, s1);
+	tmp = stpcpy(tmp, s2);
+	
+	return rv;
+}
+
+#endif
+
 int
-main(int argc, char *argv[])
+main(int argc, char **argv)
 {
 	const char *country, *host;
 	char *qnichost;
 	int ch, flags, use_qnichost;
+
+#ifdef __GNO__
+	REPORT_STACK();
+#endif
 
 #ifdef	SOCKS
 	SOCKSinit(argv[0]);
@@ -190,7 +325,11 @@ main(int argc, char *argv[])
 	}
 	while (argc-- > 0) {
 		if (country != NULL) {
+#ifdef __GNO__
+			qnichost = xstrdup2(country, QNICHOST_TAIL);
+#else
 			s_asprintf(&qnichost, "%s%s", country, QNICHOST_TAIL);
+#endif
 			whois(*argv, qnichost, flags);
 		} else if (use_qnichost)
 			if ((qnichost = choose_server(*argv)) != NULL)
@@ -222,7 +361,11 @@ choose_server(char *domain)
 	if (strlen(domain) > sizeof("-NORID")-1 &&
 	    strcasecmp(domain + strlen(domain) - sizeof("-NORID") + 1,
 		"-NORID") == 0) {
+#ifdef __GNO__
+		retval = xstrdup(NORIDHOST);
+#else
 		s_asprintf(&retval, "%s", NORIDHOST);
+#endif
 		return (retval);
 	}
 	while (pos > domain && *pos != '.')
@@ -230,11 +373,21 @@ choose_server(char *domain)
 	if (pos <= domain)
 		return (NULL);
 	if (isdigit((unsigned char)*++pos))
+#ifdef __GNO__
+		retval = xstrdup(ANICHOST);
+#else
 		s_asprintf(&retval, "%s", ANICHOST);
+#endif
 	else
+#ifdef __GNO__
+		retval = xstrdup2(pos, QNICHOST_TAIL);
+#else
 		s_asprintf(&retval, "%s%s", pos, QNICHOST_TAIL);
+#endif
 	return (retval);
 }
+
+#ifndef __GNO__
 
 static struct addrinfo *
 gethostinfo(char const *host, int exit_on_error)
@@ -255,7 +408,9 @@ gethostinfo(char const *host, int exit_on_error)
 	}
 	return (res);
 }
+#endif
 
+#ifndef __GNO__
 /*
  * Wrapper for asprintf(3) that exits on error.
  */
@@ -272,14 +427,50 @@ s_asprintf(char **ret, const char *format, ...)
 	va_end(ap);
 }
 
+#endif
+
 static void
 whois(const char *query, const char *hostname, int flags)
 {
 	FILE *sfi, *sfo;
-	struct addrinfo *hostres, *res;
 	char *buf, *host, *nhost, *p;
 	int i, s;
 	size_t c, len;
+
+#ifdef __GNO__
+	// no getaddrinfo (yet)
+	// take from old whois.
+	
+	struct hostent *hp;
+	struct servent *sp;
+	struct sockaddr_in sin;
+
+	hp = gethostbyname(hostname);
+	if (hp == NULL)
+	{
+		err(EX_OSERR, "gethostbyname(%s)", hostname);	
+	}
+	
+	s = socket(hp->h_addrtype, SOCK_STREAM, 0);
+	if (s < 0)
+	{
+		err(EX_OSERR, "socket()");		
+	}
+	bzero((caddr_t)&sin, sizeof (sin));
+	bcopy(hp->h_addr, (char *)&sin.sin_addr, hp->h_length);
+	sp = getservbyname("whois", "tcp");
+	if (sp == NULL) {
+		(void)fprintf(stderr, "whois: whois/tcp: unknown service\n");
+		exit(1);
+	}	
+	sin.sin_port = sp->s_port;
+	if (connect(s, (struct __SOCKADDR *)&sin, sizeof(sin)) < 0)
+	{
+		err(EX_OSERR, "connect()");
+	}
+	
+#else
+	struct addrinfo *hostres, *res;
 
 	hostres = gethostinfo(hostname, 1);
 	for (res = hostres; res; res = res->ai_next) {
@@ -294,8 +485,15 @@ whois(const char *query, const char *hostname, int flags)
 	if (res == NULL)
 		err(EX_OSERR, "connect()");
 
+#endif
+
+#ifdef __GNO__
+	sfi = fdopen(s, "rb");
+	sfo = fdopen(s, "wb");
+#else
 	sfi = fdopen(s, "r");
 	sfo = fdopen(s, "w");
+#endif
 	if (sfi == NULL || sfo == NULL)
 		err(EX_OSERR, "fdopen()");
 	if (strcmp(hostname, GERMNICHOST) == 0) {
@@ -320,8 +518,12 @@ whois(const char *query, const char *hostname, int flags)
 						break;
 					}
 				}
+#ifdef __GNO__
+				nhost = xstrndup(host, (int)(buf + len - host));
+#else
 				s_asprintf(&nhost, "%.*s",
 				     (int)(buf + len - host), host);
+#endif
 			} else if ((host =
 			    strnstr(buf, WHOIS_ORG_SERVER_ID, len)) != NULL) {
 				host += sizeof(WHOIS_ORG_SERVER_ID) - 1;
@@ -331,16 +533,24 @@ whois(const char *query, const char *hostname, int flags)
 						break;
 					}
 				}
+#ifdef __GNO__
+				nhost = xstrndup(host, (int)(buf + len - host));
+#else
 				s_asprintf(&nhost, "%.*s",
 				    (int)(buf + len - host), host);
+#endif
 			} else if (strcmp(hostname, ANICHOST) == 0) {
 				for (c = 0; c <= len; c++)
 					buf[c] = tolower((int)buf[c]);
 				for (i = 0; ip_whois[i] != NULL; i++) {
 					if (strnstr(buf, ip_whois[i], len) !=
 					    NULL) {
+#ifdef __GNO__
+						nhost = xstrdup(ip_whois[i]);
+#else
 						s_asprintf(&nhost, "%s",
 						    ip_whois[i]);
+#endif
 						break;
 					}
 				}
