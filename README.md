@@ -8,27 +8,23 @@ GSTCP.
 Installation:
 -------------
 
-1. copy the `marignotti`, `ftp`, `sic`, and `whois` executables to your `/usr/local/bin` 
-directory.
-
+1. copy the `marignotti`, `ftp`, `sic`, and `whois` executables to your `/usr/local/bin` directory.
   * `ftp` is an update of the gno 2.0.6 ftp (it adds passive ftp support).
-
   * `whois` is an updated version (from FreeBSD 9.0).  The gno 2.0.6 version is from FreeBSD 2.1.
-
   * `sic` is a very simple irc client. 
 
-  example: 
-    sic -h irc.a2central.com -p 6667 -n myname
-    (a bunch of messages)
-    :j #a2c.chat << join a room
-
+    Example:
+    
+        sic -h irc.a2central.com -p 6667 -n myname
+        (a bunch of messages)
+        :j #a2c.chat << join a room
 
 2. copy the `etc/services` file to `/etc/services` (if it does not exist).
 
 3. edit and copy the `etc/resolve.conf` file to `/etc/resolve.conf` (if it does 
 not exist). This file is your DNS server
 
-4. If you don't have a DNS server, edit `/etc/hosts` to include your favorite 
+4. If you don not have a DNS server, edit `/etc/hosts` to include your favorite 
 sites.
 
 
@@ -39,7 +35,7 @@ Usage:
 Run marignotti in the background (`marignotti &`).  To quit, bring it to the 
 foreground (`fg`) and hit `control-C`.
 
-If you're using the Sweet-16 emulator version 3.0, `marignotti -d` will print
+If you are using the Sweet-16 emulator version 3.0, `marignotti -d` will print
 some debugging information to the debugger console.  `marignotti -dd` will 
 enable extra debugging information (including the contents of reads and 
 writes).
@@ -86,7 +82,7 @@ of `sendto`.
 (set/clear non-blocking).
 
 `getsockopt` -- support for `SO_OOBINLINE`, `SO_SNDLOWAT`, `SO_RCVLOWAT`, 
-`SO_SNDTIMEO`, `SO_RCVTIMEO`, `SNDLOWAT` and `SNDTIMEO` set flags but don't have any 
+`SO_SNDTIMEO`, `SO_RCVTIMEO`, `SNDLOWAT` and `SNDTIMEO` set flags but don not have any 
 other effect.  `OOBINLINE` is only be supported when true.
 
 `getsockopt` -- support for `SO_TYPE`, `SO_OOBINLINE`, `SO_SNDLOWAT`, `SO_RCVLOWAT`, 
