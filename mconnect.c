@@ -45,7 +45,10 @@ int mconnect(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     }
 
     if (addrlen < 8 || !addr) return EINVAL;
-    if (addr->sin_family != AF_INET) return EINVAL;
+    // AF_UNSPEC (aka 0) is commonly used.
+    // TODO -- AF_LOCAL could use pipes
+    if (addr->sin_family != AF_UNSPEC && addr->sin_family != AF_INET)
+        return EINVAL;
 
     if (e->_TYPE == SOCK_DGRAM)
     {
