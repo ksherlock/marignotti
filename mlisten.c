@@ -37,7 +37,7 @@ int mlisten(Entry *e, void *p1, void *p2, void *p3, void *p4, void *p5)
     if (t) return ENETDOWN;
     
     // not in TCPSCLOSED state.
-    if (terr = tcperrConExists) return EINVAL;
+    if (terr == tcperrConExists) return EINVAL;
     if (terr) return EINVAL; // other errors?
     
     return 0;
