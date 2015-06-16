@@ -81,12 +81,19 @@ of `sendto`.
 `ioctl` -- support for `FIONREAD` (bytes available to read) and `FIONBIO` 
 (set/clear non-blocking).
 
+`setsockopt` --  `SO_SNDLOWAT`, `SO_RCVLOWAT`, `SO_SNDTIMEO`, and `SO_RCVTIMEO` are supported.
+`SO_OOBINLINE` errors unless it's true. 
+`SO_DEBUG`, `SO_REUSEADDR`, `SO_REUSEPORT`, `SO_KEEPALIVE` set a flag but have no other effect.
+
+
+
+`getsockopt` -- support for `SO_TYPE`, `SO_DEBUG`, `SO_REUSEADDR`, `SO_REUSEPORT`, `SO_KEEPALIVE`, 
+`SO_OOBINLINE`, `SO_SNDLOWAT`, `SO_RCVLOWAT`, `SO_SNDTIMEO`, `SO_RCVTIMEO`, `SO_NREAD`, `SO_NWRITE`
+
 `getsockopt` -- support for `SO_OOBINLINE`, `SO_SNDLOWAT`, `SO_RCVLOWAT`, 
 `SO_SNDTIMEO`, `SO_RCVTIMEO`, `SNDLOWAT` and `SNDTIMEO` set flags but don not have any 
 other effect.  `OOBINLINE` is only be supported when true.
 
-`getsockopt` -- support for `SO_TYPE`, `SO_OOBINLINE`, `SO_SNDLOWAT`, `SO_RCVLOWAT`, 
-`SO_SNDTIMEO`
 
 Not (yet) supported:
 --------------------
