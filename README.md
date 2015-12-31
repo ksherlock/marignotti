@@ -21,10 +21,10 @@ Installation:
 
 2. copy the `etc/services` file to `/etc/services` (if it does not exist).
 
-3. edit and copy the `etc/resolve.conf` file to `/etc/resolve.conf` (if it does 
-not exist). This file is your DNS server
+3. edit and copy the `etc/resolv.conf` file to `/etc/resolv.conf` (if it does 
+not exist). This file points to your DNS server; update it as needed.
 
-4. If you don not have a DNS server, edit `/etc/hosts` to include your favorite 
+4. If you do not have a DNS server, edit `/etc/hosts` to include your favorite 
 sites.
 
 
