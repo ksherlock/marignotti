@@ -32,4 +32,3 @@
 #define PRU_CO_GETOPT	18
 #define PRU_CO_SETOPT	19
 #define PRU_SELECT	20
-

@@ -204,4 +204,3 @@ void s16_debug_tcp(unsigned ipid)
     s16_debug_printf("          uwUDPCount: $%08lx", ur->uwUDPCount);
 
 }
-
