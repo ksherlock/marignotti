@@ -105,7 +105,7 @@ void ShutDown(word flags, Boolean force, displayPtr fx)
     }
 }
 
-#define VERSION "0.3"
+#define VERSION "0.4"
 static void version(void)
 {
     fputs("Marignotti " VERSION "\n", stdout);
