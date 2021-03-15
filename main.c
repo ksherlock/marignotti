@@ -63,7 +63,7 @@ Word StartUp(displayPtr fx)
   // require 3.0b3
   if (TCPIPLongVersion() < 0x03006003)
   {
-    if (fx) fx("Marinetti 3.0b3 is required.");
+    if (fx) fx("\pMarinetti 3.0b3 is required.");
     if (flags & kLoaded)
       UnloadOneTool(54);
     return -1;      
